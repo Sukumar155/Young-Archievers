@@ -1,0 +1,106 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ZONE-A",
+        "name": "Zone A: Pandu Ghat & Brahmaputra Lowlands",
+        "riskLevel": "CRITICAL",
+        "waterDepth": 1.95,
+        "floodVelocity": "1.8 m/s",
+        "color": "#DC2626",
+        "populationAtRisk": 6400,
+        "warning": "Embankment overtopping active. Severe inundation."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [91.685, 26.175],
+            [91.715, 26.195],
+            [91.735, 26.185],
+            [91.720, 26.160],
+            [91.690, 26.155],
+            [91.685, 26.175]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ZONE-B",
+        "name": "Zone B: Bharalu River Confluence & Fancy Bazar",
+        "riskLevel": "HIGH",
+        "waterDepth": 1.25,
+        "floodVelocity": "0.9 m/s",
+        "color": "#D97706",
+        "populationAtRisk": 4200,
+        "warning": "Drainage backflow from Brahmaputra. Water rising 8cm/hr."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [91.735, 26.185],
+            [91.765, 26.190],
+            [91.775, 26.170],
+            [91.745, 26.155],
+            [91.735, 26.185]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ZONE-C",
+        "name": "Zone C: Jalukbari Outer Basin & Deepor Lows",
+        "riskLevel": "MODERATE",
+        "waterDepth": 0.65,
+        "floodVelocity": "0.4 m/s",
+        "color": "#3B82F6",
+        "populationAtRisk": 2300,
+        "warning": "Water logging in low-lying corridors. High-clearance vehicles only."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [91.650, 26.140],
+            [91.685, 26.155],
+            [91.705, 26.130],
+            [91.665, 26.120],
+            [91.650, 26.140]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "ZONE-D",
+        "name": "Zone D: Dispur Capital Ridge & Khanapara High Ground",
+        "riskLevel": "LOW",
+        "waterDepth": 0.08,
+        "floodVelocity": "0.1 m/s",
+        "color": "#10B981",
+        "populationAtRisk": 350,
+        "warning": "Dry safe corridor. Main relief distribution hub."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [91.770, 26.145],
+            [91.810, 26.155],
+            [91.820, 26.125],
+            [91.775, 26.115],
+            [91.770, 26.145]
+          ]
+        ]
+      }
+    }
+  ]
+}
