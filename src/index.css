@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@import "./design-system/tokens.css";
+@import "./design-system/typography.css";
+@import "./design-system/globals.css";
+
+/* Custom utility bindings if needed */
+@layer utilities {
+  .text-deep-river {
+    color: var(--color-primary);
+  }
+  .bg-deep-river {
+    background-color: var(--color-primary);
+  }
+  .border-deep-river {
+    border-color: var(--color-primary);
+  }
+}

@@ -1,0 +1,322 @@
+/* =============================================================================
+   NEXORA — Design Tokens
+   -----------------------------------------------------------------------------
+   Identity: "Monsoon Resilience". A calm, editorial light system built for
+   high-stakes operational software. One accent (Deep Cobalt), a warm-neutral
+   canvas, near-black ink, and a restrained semantic severity ramp.
+
+   Rules of the system
+     • One accent colour. Everything else is neutral or semantic.
+     • Warm-neutral canvas (#F8F8F7) — never pure white as the page colour.
+     • Text is near-black charcoal, not navy.
+     • Severity colours are desaturated so they read as instrumentation,
+       not as decoration.
+   ========================================================================== */
+
+@theme {
+  /* ===== Brand ===== */
+  --color-cobalt: #1A3A6B;        /* primary accent — Deep Cobalt */
+  --color-cobalt-deep: #12294D;
+  --color-cobalt-ink: #0F2140;
+  --color-cobalt-muted: #5B7BA8;
+  --color-cobalt-tint: #EEF2F8;   /* subtle filled surface */
+  --color-cobalt-line: #C3D0E4;   /* subtle border */
+
+  /* ===== Neutrals (warm) ===== */
+  --color-canvas: #F8F8F7;
+  --color-ink: #14151A;
+  --color-graphite: #2E3038;
+
+  /* ===== Typeface bindings (drive Tailwind's font-sans / font-mono) =====
+     Inter for all product UI. JetBrains Mono strictly for telemetry,
+     identifiers and coordinates — the two families never mix in a heading. */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+
+  /* ===== Semantic severity (desaturated, instrument-like) ===== */
+  --color-critical: #B42318;
+  --color-severe: #B54708;
+  --color-warning: #A15C07;
+  --color-success: #126B34;
+  --color-info: #2C5C93;
+
+  /* Legacy aliases retained for compatibility with existing utilities. */
+  --color-midnight-navy: #1A3A6B;
+  --color-deep-navy: #12294D;
+  --color-blue: #2C5C93;
+  --color-cyan: #2E5F94;
+  --color-light-blue: #EEF2F8;
+  --color-paper: #F8F8F7;
+  --color-accent: #1A3A6B;
+  --color-orange: #B54708;
+  --color-cool-grey: #F1F1EF;
+  --color-high: #B54708;
+  --color-moderate: #A15C07;
+  --color-safe: #126B34;
+  --color-advisory: #2C5C93;
+}
+
+:root,
+[data-theme="light"] {
+  /* ---------- Surfaces ---------- */
+  --nx-canvas: #F8F8F7;            /* page background — warm off-white */
+  --color-bg: #F8F8F7;
+  --color-background: #F8F8F7;
+
+  --nx-surface: #FFFFFF;           /* cards, panels, sheets */
+  --color-surface: #FFFFFF;
+  --color-surface-white: #FFFFFF;
+  --color-card: #FFFFFF;
+  --color-card-hover: #FFFFFF;
+
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-sunken: #F1F1EF; /* wells, table stripes, inset panels */
+  --color-surface-subtle: #FCFCFB; /* barely-there raised neutral */
+
+  /* ---------- Borders ---------- */
+  --nx-line: #E4E4E0;              /* default hairline */
+  --color-border: #E4E4E0;
+  --color-border-subtle: #EDEDEA;
+  --nx-line-strong: #D4D4CE;       /* inputs, emphasised dividers */
+  --nx-line-soft: #EFEFEC;         /* internal separators */
+
+  /* ---------- Text ---------- */
+  --color-text-primary: #14151A;   /* near-black charcoal */
+  --color-text-secondary: #5A5C66;
+  --color-text-muted: #6B6D77;
+  --color-text-faint: #A1A3AC;
+  --color-text-inverse: #FFFFFF;
+
+  /* ---------- Brand ---------- */
+  --color-primary: #1A3A6B;        /* Deep Cobalt */
+  --color-primary-hover: #142C52;
+  --color-primary-active: #0F2140;
+  --color-primary-soft: #EEF2F8;   /* tinted fill */
+  --color-primary-soft-hover: #E3EAF4;
+  --color-primary-border: #C3D0E4;
+  --color-primary-text: #1A3A6B;   /* accent-coloured text on light */
+
+  --color-secondary: #2C5C93;      /* informational steel blue */
+  --color-cyan: #2E5F94;
+  --color-info: #2C5C93;
+  --color-brown: #6B5545;
+  --color-midnight: #1A3A6B;
+  --color-primary-blue: #2C5C93;
+  --color-dark-blue: #1A3A6B;
+  --color-card-selected: #EEF2F8;
+  --color-deep-navy: #12294D;
+  --color-midnight-navy: #1A3A6B;
+
+  /* ---------- Severity ---------- */
+  --color-critical: #B42318;
+  --color-critical-soft: #FCF1F0;
+  --color-critical-border: #F3CFC9;
+  --color-severe: #B54708;
+  --color-severe-soft: #FBF7EC;
+  --color-severe-border: #F7E9D6;
+  --color-high: #B54708;
+  --color-warning: #A15C07;
+  --color-warning-soft: #FAF0D8;
+  --color-warning-border: #EFE3C4;
+  --color-moderate: #A15C07;
+  --color-success: #126B34;
+  --color-success-soft: #F1F8F3;
+  --color-success-border: #CFE6D8;
+  --color-safe: #126B34;
+  --color-advisory: #2C5C93;
+
+  --nx-danger: #B42318;
+  --nx-danger-hover: #9A1C13;
+
+  /* ---------- Typography ---------- */
+  --font-headings: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+
+  /* Type scale — controlled, never shouty */
+  --text-display: 2.5rem;
+  --text-title: 1.75rem;
+  --text-section: 1.25rem;
+  --text-body: 0.9375rem;
+  --text-meta: 0.8125rem;
+  --text-micro: 0.6875rem;
+
+  /* ---------- Spacing (4px base) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---------- Radius: small & confident, not pill-happy ---------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-button: 8px;
+  --radius-input: 8px;
+  --radius-card: 12px;
+  --radius-modal: 14px;
+  --radius-pill: 9999px;
+
+  /* ---------- Elevation: shallow, realistic ---------- */
+  --shadow-subtle: 0 1px 2px rgba(20, 21, 26, 0.04);
+  --shadow-card: 0 1px 2px rgba(20, 21, 26, 0.04);
+  --shadow-raised: 0 1px 2px rgba(20, 21, 26, 0.05), 0 2px 6px -2px rgba(20, 21, 26, 0.06);
+  --shadow-elevated: 0 4px 12px -2px rgba(20, 21, 26, 0.08), 0 2px 4px -2px rgba(20, 21, 26, 0.04);
+  --shadow-modal: 0 24px 48px -12px rgba(20, 21, 26, 0.18), 0 8px 16px -8px rgba(20, 21, 26, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(26, 58, 107, 0.13);
+
+  /* ---------- Motion ---------- */
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --active-scale: scale(0.985);
+  --hover-lift: translateY(-1px);
+
+  --ink-rgb: 20, 21, 26;
+  --paper-line: rgba(20, 21, 26, 0.06);
+}
+
+
+/* ============================================================================
+   COMPONENT RAMPS
+   Values the components use that predate the token file. Declared here so the
+   ramps are the source of truth rather than the class strings. Each ramp runs
+   soft fill -> line -> text, and every step clears 4.5:1 as text on its own
+   soft fill.
+   ========================================================================== */
+
+/* Neutral: the greys between the canvas and the ink */
+--color-line:            #DEDEDA;   /* default hairline, card and input edges */
+--color-line-soft:       #DCDCD8;   /* one step lighter, for quiet separators */
+--color-line-strong:     #D4D4CE;   /* pressed and focused edges */
+--color-line-hover:      #D2D3D8;
+--color-wash:            #EFEFEC;   /* hover wash on a neutral surface */
+--color-line-cool:       #D5D6DA;   /* neutral with the faintest cool cast */
+--color-line-mist:       #C6C7CD;   /* terminal chrome */
+--color-ink-faint:       #8E9099;   /* disabled ink on light */
+--color-chrome:          #EFEFF1;   /* neutral chrome wash */
+
+/* Cobalt, continued: the dark steps the accent ramp needs below 500 */
+--color-cobalt-ink-deep: #0F2140;
+--color-cobalt-fill:     #1B2434;   /* accent-tinted fill, dark theme */
+--color-cobalt-line:     #2E4059;   /* accent border, dark theme */
+--color-cobalt-bright:   #6E93C4;   /* accent on a dark surface */
+--color-cobalt-text:     #9DB8DC;   /* accent text, dark theme */
+--color-cobalt-hover:    #E3EAF4;   /* accent hover wash, light theme */
+--color-cobalt-wash:     #E4E4E0;
+
+/* Success: quiet enough to use as a fill, dark enough to use as text */
+--color-success-ink:     #2A6B4A;   /* success text on a light fill */
+--color-success-deep:    #1C6B45;
+--color-success-press:   #12703C;
+--color-success-press-2: #0E5230;   /* success hover */
+--color-success-line:    #C9E8D6;
+--color-success-fill:    #E4F3E9;   /* success tint */
+--color-success-wash:    #F0F7F4;   /* success tint, quieter */
+--color-success-bright:  #5E9C7E;
+--color-success-lcd:     #7CC99A;   /* LCD and dark-theme success */
+--color-success-lcd-dim: #5BBF7A;
+
+/* Warning and severe: the warm browns, amber tints included */
+--color-severe-ink:      #7A3E0B;   /* severe text on a light fill */
+--color-severe-deep:     #6B360C;
+--color-severe-press:    #8A4D06;
+--color-severe-press-2:  #93690F;
+--color-severe-press-3:  #96540A;
+--color-severe-fill:     #F7E9D6;
+--color-severe-wash:     #FBE9E7;
+--color-severe-line:     #C9A98E;
+--color-severe-bright:   #B5824A;
+--color-warning-lcd:     #BE9A2E;
+--color-warning-lcd-2:   #D9A03A;   /* amber, dark theme and LCD */
+--color-warning-lcd-3:   #E8C77A;
+--color-warning-lcd-4:   #F5E0A0;
+--color-warning-line:    #5E4715;   /* amber line, dark theme */
+
+/* Critical: the reds, and the tints that carry them */
+--color-critical-press:  #9E2C25;
+--color-critical-press-2:#A93A32;
+--color-critical-ink:    #8A1A12;   /* critical text on a light fill */
+--color-critical-fill:   #FBE9E7;
+--color-critical-bright: #F0A79E;
+--color-critical-deep:   #4A4038;
+
+/* Graphite, continued: the dark-theme surfaces that are not the base two */
+--color-graphite-deep:   #0D0E12;   /* the deepest surface, wells and scrims */
+--color-graphite-line:   #282931;   /* hairline on a graphite surface */
+--color-graphite-ink:    #09090C;   /* the frame, the handset body */
+/* =============================================================================
+   Dark theme — "Night Operations"
+   A neutral graphite inversion. Deliberately NOT navy: the brand stays warm and
+   ink-black in both modes, which is what keeps the identity consistent.
+   ========================================================================== */
+[data-theme="dark"],
+.dark {
+  color-scheme: dark;
+
+  --nx-canvas: #101116;
+  --color-bg: #101116;
+  --color-background: #101116;
+
+  --color-surface: #17181C;
+  --color-surface-white: #17181C;
+  --color-card: #17181C;
+  --color-card-hover: #1C1D22;
+  --color-surface-elevated: #1C1D22;
+  --color-surface-sunken: #14151A;
+  --color-surface-subtle: #1A1B20;
+
+  --nx-line: #2A2B33;
+  --color-border: #2A2B33;
+  --color-border-subtle: #23242B;
+  --nx-line-strong: #35363F;
+  --nx-line-soft: #21222A;
+
+  --color-text-primary: #F1F1EF;
+  --color-text-secondary: #A1A3AC;
+  --color-text-muted: #74767F;
+  --color-text-faint: #5E606A;
+
+  --color-primary: #6E93C4;
+  --color-primary-hover: #85A6D2;
+  --color-primary-active: #A5BDDD;
+  --color-primary-soft: #1B2434;
+  --color-primary-soft-hover: #223047;
+  --color-primary-border: #2E4059;
+  --color-primary-text: #9DB8DC;
+  --color-card-selected: #1B2434;
+
+  --color-secondary: #7FA5CE;
+  --color-cyan: #6E93C4;
+  --color-info: #7FA5CE;
+
+  --color-critical: #E0776C;
+  --color-critical-soft: #2A1614;
+  --color-critical-border: #4A2622;
+  --color-severe: #DD8348;
+  --color-warning: #D9A03A;
+  --color-warning-soft: #241B0B;
+  --color-warning-border: #4A3A18;
+  --color-high: #DD8348;
+  --color-moderate: #D9A03A;
+  --color-success: #5BBF7A;
+  --color-success-soft: #14251F;
+  --color-success-border: #234133;
+  --color-safe: #5BBF7A;
+  --nx-danger: #E0776C;
+  --nx-danger-hover: #E89086;
+
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.45), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 4px 14px -2px rgba(0, 0, 0, 0.55);
+  --shadow-modal: 0 24px 48px -12px rgba(0, 0, 0, 0.7);
+  --shadow-focus: 0 0 0 3px rgba(110, 147, 196, 0.28);
+
+  --ink-rgb: 241, 241, 239;
+  --paper-line: rgba(241, 241, 239, 0.06);
+}
