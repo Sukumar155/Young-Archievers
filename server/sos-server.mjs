@@ -15,9 +15,11 @@
  * Data: server/data/sos.json         (persisted automatically)
  */
 import { createServer } from 'node:http';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, 'data');
@@ -390,6 +392,156 @@ async function handleChat(req, res) {
   }
 }
 
+/* --------------------------- YOLO Detection ----------------------------- */
+/**
+ * POST /api/yolo/detect
+ * Accepts multipart/form-data with fields:
+ *   file       — the image (any format)
+ *   model_type — "fire_smoke" | "flood" | "auto" (default: "auto")
+ *
+ * Saves the image to a temp file, calls server/yolo_detect.py via Python
+ * (which runs on the local GPU using ultralytics), and returns JSON.
+ */
+async function handleYoloDetect(req, res) {
+  const contentType = req.headers['content-type'] || '';
+  if (!contentType.includes('multipart/form-data')) {
+    sendJson(res, 400, { error: 'Expected multipart/form-data' });
+    return;
+  }
+
+  // Parse boundary
+  const boundaryMatch = contentType.match(/boundary=([^\s;]+)/);
+  if (!boundaryMatch) {
+    sendJson(res, 400, { error: 'Missing multipart boundary' });
+    return;
+  }
+  const boundary = '--' + boundaryMatch[1];
+
+  // Read full body (limit 20 MB for images)
+  let raw;
+  try {
+    raw = await new Promise((resolve, reject) => {
+      const chunks = [];
+      let size = 0;
+      req.on('data', chunk => {
+        size += chunk.length;
+        if (size > 20 * 1024 * 1024) {
+          req.destroy();
+          reject(Object.assign(new Error('Image too large (max 20 MB)'), { status: 413 }));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      req.on('end', () => resolve(Buffer.concat(chunks)));
+      req.on('error', reject);
+    });
+  } catch (err) {
+    sendJson(res, err.status || 400, { error: err.message });
+    return;
+  }
+
+  // Split multipart parts
+  const boundaryBuf = Buffer.from(boundary);
+  const parts = [];
+  let pos = 0;
+  while (pos < raw.length) {
+    const start = raw.indexOf(boundaryBuf, pos);
+    if (start === -1) break;
+    const headerEnd = raw.indexOf('\r\n\r\n', start + boundaryBuf.length);
+    if (headerEnd === -1) break;
+    const headers = raw.slice(start + boundaryBuf.length + 2, headerEnd).toString();
+    const bodyStart = headerEnd + 4;
+    const nextBoundary = raw.indexOf(boundaryBuf, bodyStart);
+    const bodyEnd = nextBoundary === -1 ? raw.length : nextBoundary - 2; // strip trailing \r\n
+    parts.push({ headers, body: raw.slice(bodyStart, bodyEnd) });
+    pos = nextBoundary === -1 ? raw.length : nextBoundary;
+  }
+
+  // Extract file and model_type from parts
+  let imageBuffer = null;
+  let imageExt = '.jpg';
+  let modelType = 'auto';
+
+  for (const part of parts) {
+    const nameMatch = part.headers.match(/name="([^"]+)"/);
+    if (!nameMatch) continue;
+    const fieldName = nameMatch[1];
+
+    if (fieldName === 'model_type') {
+      const val = part.body.toString().trim();
+      if (['fire_smoke', 'flood', 'auto'].includes(val)) modelType = val;
+    }
+
+    if (fieldName === 'file') {
+      imageBuffer = part.body;
+      const fnMatch = part.headers.match(/filename="([^"]+)"/);
+      if (fnMatch) {
+        const ext = fnMatch[1].split('.').pop().toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'bmp', 'webp'].includes(ext)) imageExt = '.' + ext;
+      }
+    }
+  }
+
+  if (!imageBuffer || imageBuffer.length === 0) {
+    sendJson(res, 400, { error: 'No image file received' });
+    return;
+  }
+
+  // Write image to temp file
+  const tmpPath = join(tmpdir(), `nexora_yolo_${Date.now()}${imageExt}`);
+  try {
+    writeFileSync(tmpPath, imageBuffer);
+  } catch (err) {
+    sendJson(res, 500, { error: `Could not write temp file: ${err.message}` });
+    return;
+  }
+
+  // Encode image as base64 data URL to send back for preview
+  const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', bmp: 'image/bmp', webp: 'image/webp' };
+  const mime = mimeMap[imageExt.replace('.', '')] || 'image/jpeg';
+  const imageDataUrl = `data:${mime};base64,${imageBuffer.toString('base64')}`;
+
+  // Call Python YOLO script
+  const scriptPath = join(__dirname, 'yolo_detect.py');
+  const result = await new Promise((resolve) => {
+    let stdout = '';
+    let stderr = '';
+    const py = spawn('python', [scriptPath, tmpPath, modelType], {
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+    });
+    py.stdout.on('data', d => { stdout += d.toString(); });
+    py.stderr.on('data', d => { stderr += d.toString(); });
+    py.on('close', (code) => {
+      try { unlinkSync(tmpPath); } catch { /* noop */ }
+      if (code !== 0 || !stdout.trim()) {
+        resolve({ ok: false, error: stderr.trim() || 'Python exited with code ' + code });
+      } else {
+        try {
+          resolve(JSON.parse(stdout.trim()));
+        } catch {
+          resolve({ ok: false, error: 'Invalid JSON from Python: ' + stdout.slice(0, 200) });
+        }
+      }
+    });
+    py.on('error', (err) => {
+      try { unlinkSync(tmpPath); } catch { /* noop */ }
+      resolve({ ok: false, error: `Failed to spawn Python: ${err.message}` });
+    });
+    // 60 second timeout
+    setTimeout(() => {
+      py.kill();
+      resolve({ ok: false, error: 'YOLO inference timed out after 60s' });
+    }, 60000);
+  });
+
+  if (!result.ok) {
+    sendJson(res, 500, { error: result.error || 'YOLO detection failed' });
+    return;
+  }
+
+  sendJson(res, 200, { ...result, image_preview: imageDataUrl });
+}
+
 function handleSSE(req, res) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -429,11 +581,12 @@ const server = createServer((req, res) => {
     return;
   }
 
-  if (req.method === 'GET' && path === '/api/health') return handleHealth(res);
-  if (req.method === 'GET' && path === '/api/sos') return handleList(res, url);
-  if (req.method === 'POST' && path === '/api/sos') return handleSubmit(req, res);
-  if (req.method === 'POST' && path === '/api/chat') return handleChat(req, res);
-  if (req.method === 'GET' && path === '/api/events') return handleSSE(req, res);
+  if (req.method === 'GET'  && path === '/api/health')       return handleHealth(res);
+  if (req.method === 'GET'  && path === '/api/sos')          return handleList(res, url);
+  if (req.method === 'POST' && path === '/api/sos')          return handleSubmit(req, res);
+  if (req.method === 'POST' && path === '/api/chat')         return handleChat(req, res);
+  if (req.method === 'GET'  && path === '/api/events')       return handleSSE(req, res);
+  if (req.method === 'POST' && path === '/api/yolo/detect')  return handleYoloDetect(req, res);
 
   if (req.method === 'GET' && path === '/') {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });

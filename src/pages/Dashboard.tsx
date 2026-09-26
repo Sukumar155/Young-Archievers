@@ -1,11 +1,184 @@
-import React from 'react';
-import { 
-  Shield, Smartphone, Home, Droplets, CloudRain, Wind, 
-  ArrowRight, AlertTriangle, Compass, CheckCircle2, ChevronRight 
+import React, { useState, useCallback, useRef } from 'react';
+import {
+  Shield, Smartphone, Home, Droplets, CloudRain, Wind,
+  ArrowRight, AlertTriangle, Compass, CheckCircle2, ChevronRight,
+  Upload, X, Flame, Eye, Loader2, ScanSearch, Cpu,
 } from 'lucide-react';
 import { TopBar } from '../components/dashboard/TopBar';
 import { useNexoraStore } from '../store/useNexoraStore';
 import { getTranslation } from '../i18n/translations';
+
+/* ─── helpers ──────────────────────────────────────────────────────────────── */
+interface YoloDetection {
+  model: string; label: string; confidence: number;
+  bbox: [number, number, number, number];
+}
+interface YoloResult {
+  ok: boolean; disaster_type: 'FIRE_SMOKE' | 'FLOOD' | 'DETECTED' | 'CLEAR';
+  detections: YoloDetection[]; count: number; image_preview: string; error?: string;
+}
+const dc = (t: string) => {
+  if (t === 'FIRE_SMOKE') return { stroke: '#E05C2A', bg: '#FBE9E7', text: '#8A2000' };
+  if (t === 'FLOOD')      return { stroke: '#1A3A6B', bg: '#EEF2F8', text: '#12294D' };
+  return                         { stroke: '#5A5C66', bg: '#F1F1EF', text: '#14151A' };
+};
+
+/* ─── YOLO Panel ───────────────────────────────────────────────────────────── */
+const YoloUploadPanel: React.FC = () => {
+  const [dragOver,  setDragOver]  = useState(false);
+  const [modelType, setModelType] = useState<'auto'|'fire_smoke'|'flood'>('auto');
+  const [file,      setFile]      = useState<File|null>(null);
+  const [preview,   setPreview]   = useState<string|null>(null);
+  const [loading,   setLoading]   = useState(false);
+  const [result,    setResult]    = useState<YoloResult|null>(null);
+  const [error,     setError]     = useState<string|null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const loadFile = (f: File) => {
+    setFile(f); setResult(null); setError(null);
+    const r = new FileReader();
+    r.onload = (e) => setPreview(e.target?.result as string);
+    r.readAsDataURL(f);
+  };
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setDragOver(false);
+    const f = e.dataTransfer.files[0];
+    if (f?.type.startsWith('image/')) loadFile(f);
+  }, []);
+  const clear = () => {
+    setFile(null); setPreview(null); setResult(null); setError(null);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+  const detect = async () => {
+    if (!file) return;
+    setLoading(true); setResult(null); setError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('model_type', modelType);
+      const res  = await fetch('/api/yolo/detect', { method: 'POST', body: form });
+      const data: YoloResult = await res.json();
+      if (!res.ok || !data.ok) throw new Error((data as any).error || 'Detection failed');
+      setResult(data);
+    } catch (e: any) { setError(e.message || 'Unknown error'); }
+    finally { setLoading(false); }
+  };
+  const detCol = (d: YoloDetection) => {
+    const l = d.label.toLowerCase();
+    if (d.model==='fire_smoke'||l.includes('fire')||l.includes('smoke')) return dc('FIRE_SMOKE');
+    if (d.model==='flood'||l.includes('flood')||l.includes('water'))     return dc('FLOOD');
+    return dc('DETECTED');
+  };
+  const col = result ? dc(result.disaster_type) : null;
+
+  return (
+    <div className="bg-white dark:bg-[#17181C] border border-[#E4E4E0] dark:border-[#2E3038] rounded-xl shadow-xs overflow-hidden">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-[#DEDEDA] dark:border-[#2E3038]">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-[#1A3A6B] flex items-center justify-center flex-shrink-0">
+            <ScanSearch className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B6D77] dark:text-[#A1A3AC] font-data">YOLO Vision • Local GPU</p>
+            <h2 className="font-heading font-bold text-sm text-[#12294D] dark:text-[#F1F1EF]">Disaster Image Detection</h2>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {(['auto','fire_smoke','flood'] as const).map(m => (
+            <button key={m} onClick={() => setModelType(m)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${modelType===m ? 'bg-[#1A3A6B] text-white' : 'bg-[#F1F1EF] dark:bg-[#1C1D22] text-[#5A5C66] dark:text-[#A1A3AC] hover:bg-[#E4E4E0] dark:hover:bg-[#2E3038]'}`}>
+              {m==='auto'?'Auto (Both)':m==='fire_smoke'?'🔥 Fire / Smoke':'🌊 Flood'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 space-y-4">
+        {!file ? (
+          <div onDragOver={e=>{e.preventDefault();setDragOver(true);}} onDragLeave={()=>setDragOver(false)}
+            onDrop={onDrop} onClick={()=>inputRef.current?.click()}
+            className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-xl p-10 cursor-pointer transition-all ${dragOver?'border-[#1A3A6B] bg-[#EEF2F8] dark:bg-[#1B2434]/40':'border-[#DEDEDA] dark:border-[#2E3038] hover:border-[#1A3A6B]/50 hover:bg-[#F8F9FC] dark:hover:bg-[#1C1D22]'}`}>
+            <div className="w-12 h-12 rounded-xl bg-[#EEF2F8] dark:bg-[#1C1D22] flex items-center justify-center">
+              <Upload className="w-6 h-6 text-[#1A3A6B] dark:text-[#9DB8DC]" />
+            </div>
+            <div className="text-center">
+              <p className="font-heading font-bold text-sm text-[#12294D] dark:text-[#F1F1EF]">Drop an image here or click to browse</p>
+              <p className="text-[11px] text-[#6B6D77] dark:text-[#A1A3AC] mt-1">JPG · PNG · BMP · WEBP — up to 20 MB</p>
+            </div>
+            <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f)loadFile(f);}} />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="relative w-full rounded-xl overflow-hidden bg-[#14151A]" style={{aspectRatio:'16/9'}}>
+              <img src={result?.image_preview??preview??''} alt="preview" className="w-full h-full object-contain select-none" />
+              {result && result.detections.length>0 && (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  {result.detections.map((d,i)=>{
+                    const [ymin,xmin,ymax,xmax]=d.bbox; const c=detCol(d);
+                    const lw=Math.min(100-xmin,d.label.length*1.65+14);
+                    return (<g key={i}>
+                      <rect x={xmin} y={ymin} width={xmax-xmin} height={ymax-ymin} fill={`${c.stroke}25`} stroke={c.stroke} strokeWidth="0.7"/>
+                      <rect x={xmin} y={Math.max(0,ymin-5)} width={lw} height="4.5" fill={c.stroke} rx="0.6"/>
+                      <text x={xmin+1} y={Math.max(3.5,ymin-1.2)} fill="#fff" fontSize="2.6" fontWeight="bold" fontFamily="sans-serif">{d.label} {d.confidence}%</text>
+                    </g>);
+                  })}
+                </svg>
+              )}
+              {loading && (
+                <div className="absolute inset-0 bg-[#14151A]/70 flex flex-col items-center justify-center gap-2">
+                  <Loader2 className="w-8 h-8 text-white animate-spin"/>
+                  <span className="text-white text-xs font-bold font-data">Running YOLO on local GPU…</span>
+                </div>
+              )}
+              <button onClick={clear} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-[#14151A]/80 text-white flex items-center justify-center hover:bg-[#B42318] transition-colors cursor-pointer">
+                <X className="w-3.5 h-3.5"/>
+              </button>
+            </div>
+
+            {result && col && (
+              <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-sm font-bold"
+                style={{backgroundColor:col.bg,borderColor:`${col.stroke}40`,color:col.text}}>
+                {result.disaster_type==='FIRE_SMOKE'&&<Flame    className="w-4 h-4 flex-shrink-0" style={{color:col.stroke}}/>}
+                {result.disaster_type==='FLOOD'     &&<Droplets className="w-4 h-4 flex-shrink-0" style={{color:col.stroke}}/>}
+                {result.disaster_type==='CLEAR'     &&<CheckCircle2 className="w-4 h-4 flex-shrink-0 text-[#126B34]"/>}
+                {result.disaster_type==='DETECTED'  &&<Eye      className="w-4 h-4 flex-shrink-0" style={{color:col.stroke}}/>}
+                <span>{result.disaster_type==='CLEAR'?'No disaster detected — area appears clear':`${result.disaster_type.replace('_',' ')} detected — ${result.count} object${result.count!==1?'s':''} found`}</span>
+              </div>
+            )}
+            {error && (
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#B42318]/30 bg-[#FBE9E7] text-[#8A1A12] text-xs font-bold">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0"/><span>{error}</span>
+              </div>
+            )}
+            {result && result.detections.length>0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B6D77] dark:text-[#A1A3AC]">Detections ({result.count})</p>
+                {result.detections.map((d,i)=>{const c=detCol(d);return(
+                  <div key={i} className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#F1F1EF] dark:bg-[#1C1D22] border border-[#DEDEDA] dark:border-[#2E3038]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{backgroundColor:c.stroke}}/>
+                      <span className="text-xs font-bold text-[#14151A] dark:text-[#F1F1EF]">{d.label}</span>
+                      <span className="text-[10px] text-[#6B6D77] dark:text-[#A1A3AC] font-data capitalize">{d.model.replace('_',' ')}</span>
+                    </div>
+                    <span className="text-xs font-bold font-data text-[#12294D] dark:text-[#9DB8DC]">{d.confidence}%</span>
+                  </div>
+                );})}
+              </div>
+            )}
+            <div className="flex items-center gap-2 pt-1">
+              <button onClick={detect} disabled={loading}
+                className="flex-1 py-2.5 rounded-xl bg-[#1A3A6B] hover:bg-[#142C52] disabled:opacity-60 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs">
+                {loading?<><Loader2 className="w-3.5 h-3.5 animate-spin"/><span>Detecting…</span></>:<><Cpu className="w-3.5 h-3.5"/><span>Run YOLO Detection</span></>}
+              </button>
+              <button onClick={clear} className="px-4 py-2.5 rounded-xl bg-[#F1F1EF] dark:bg-[#1C1D22] hover:bg-[#E4E4E0] dark:hover:bg-[#2E3038] text-[#5A5C66] dark:text-[#A1A3AC] text-xs font-bold border border-[#DEDEDA] dark:border-[#2E3038] transition-all cursor-pointer">Clear</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const DashboardPage: React.FC = () => {
   const {
@@ -305,6 +478,9 @@ export const DashboardPage: React.FC = () => {
           </div>
 
         </div>
+
+        {/* YOLO DISASTER IMAGE DETECTION */}
+        <YoloUploadPanel />
 
       </main>
 
