@@ -45,7 +45,29 @@ export interface ServerSOS {
 
 export type SosServerStatus = 'CONNECTING' | 'LIVE' | 'OFFLINE';
 
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) || '';
+/**
+ * Base URL for the NEXORA bridge.
+ *
+ * Empty in development, where Vite proxies `/api` to localhost:3001 (see
+ * vite.config.ts). In production the frontend and the bridge are deployed to
+ * different origins, so VITE_API_URL must point at the bridge:
+ *
+ *   VITE_API_URL=https://nexora-api.up.railway.app
+ *
+ * The trailing slash is stripped so `${API_BASE}/api/...` never doubles up.
+ *
+ * This is exported because several components used to hardcode a relative
+ * '/api/...' path instead. That silently ignored VITE_API_URL, so on a split
+ * deployment the login screen kept POSTing to the static host and 404'd even
+ * with a perfectly healthy backend running — the exact failure this exists to
+ * prevent. Always build URLs from here.
+ */
+export const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) || '').replace(/\/+$/, '');
+
+/** Absolute URL for a bridge route. */
+export function apiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
 
 /** Session token from OTP login, sent as a bearer token when present. */
 let authToken: string | null = null;
@@ -62,7 +84,7 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 6000): P
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(apiUrl(path), {
       ...init,
       signal: controller.signal,
       headers: {

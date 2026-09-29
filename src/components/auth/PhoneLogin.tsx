@@ -5,7 +5,8 @@ import {
 } from 'lucide-react';
 import { OTPInput } from './OTPInput';
 import { SosSignalButton } from '../shared/SosSignalButton';
-import { setAuthToken } from '../../services/sosApi';
+import { setAuthToken, apiUrl } from '../../services/sosApi';
+import { describeApiFailure, describeMissingApi, looksLikeMissingApi } from '../../services/apiErrors';
 import { useNexoraStore, UserRole } from '../../store/useNexoraStore';
 import {
   detectLocation, reverseGeocode, isGeolocationSupported, coordsLabel
@@ -74,7 +75,7 @@ export const PhoneLogin: React.FC = () => {
   /** Ask the backend whether a real SMS gateway is configured. */
   useEffect(() => {
     let alive = true;
-    fetch('/api/auth/otp/status')
+    fetch(apiUrl('/api/auth/otp/status'))
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (alive && d) setDevMode(Boolean(d.devMode)); })
       .catch(() => { /* offline — the send attempt will report the real error */ });
@@ -152,12 +153,20 @@ export const PhoneLogin: React.FC = () => {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/otp/request', {
+      const res = await fetch(apiUrl('/api/auth/otp/request'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneNumber, role: finalRole }),
       });
       const data = await res.json().catch(() => ({}));
+
+      // A 404 or a non-JSON body means there is no bridge behind this origin at
+      // all — a static-only deployment. Saying "could not send the code" there
+      // sends the user hunting for SMS credentials that were never the problem.
+      if (looksLikeMissingApi(res)) {
+        setOtpError(describeMissingApi('send the verification code'));
+        return;
+      }
 
       if (!res.ok || !data.ok) {
         // Rate limit tells us exactly how long to wait — honour it.
@@ -181,8 +190,8 @@ export const PhoneLogin: React.FC = () => {
       } else {
         setNotice(`Code sent by SMS to +91 ${phoneNumber}.`);
       }
-    } catch {
-      setOtpError('Could not reach the verification service. Is the backend running? (npm run dev:all)');
+    } catch (err) {
+      setOtpError(describeApiFailure(err, 'send the verification code'));
     } finally {
       setLoading(false);
     }
@@ -210,12 +219,17 @@ export const PhoneLogin: React.FC = () => {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/otp/verify', {
+      const res = await fetch(apiUrl('/api/auth/otp/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneNumber, code: otp }),
       });
       const data = await res.json().catch(() => ({}));
+
+      if (looksLikeMissingApi(res)) {
+        setOtpError(describeMissingApi('verify the code'));
+        return;
+      }
 
       if (!res.ok || !data.ok) {
         setOtpError(data.error || 'Verification failed. Please try again.');
@@ -265,8 +279,8 @@ export const PhoneLogin: React.FC = () => {
       }
 
       login(`+91 ${phoneNumber}`, grantedRole, profile);
-    } catch {
-      setOtpError('Could not reach the verification service. Is the backend running? (npm run dev:all)');
+    } catch (err) {
+      setOtpError(describeApiFailure(err, 'verify the code and sign in'));
     } finally {
       setLoading(false);
     }

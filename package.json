@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "start": "node server/sos-server.mjs",
     "server": "node server/sos-server.mjs",
     "dev:all": "node scripts/dev-all.mjs",
     "build": "tsc -b && vite build",
@@ -19,6 +20,7 @@
     "verify:text": "python scripts/verify-text.py",
     "verify:banner": "node scripts/verify-alert-banner.mjs",
     "verify:css": "python scripts/check-css-comments.py",
+    "verify:api-base": "node scripts/verify-api-base.mjs",
     "roster": "node scripts/roster.mjs",
     "roster:add": "node scripts/roster.mjs",
     "db:migrate": "node scripts/migrate.mjs",

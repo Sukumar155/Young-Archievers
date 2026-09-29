@@ -12,6 +12,8 @@
  * (citizen portal) instead of spanning a full page width.
  */
 import React, { useState, useCallback, useRef } from 'react';
+import { apiUrl } from '../../services/sosApi';
+import { describeApiFailure, describeMissingApi, looksLikeMissingApi } from '../../services/apiErrors';
 import {
   AlertTriangle, CheckCircle2, Cpu, Droplets, Eye, Flame, Loader2,
   ScanSearch, Upload, X,
@@ -154,12 +156,16 @@ export const YoloUploadPanel: React.FC<Props> = ({ compact = false, className = 
       form.append('file', file);
       form.append('model_type', modelType);
       form.append('include_context', includeContext ? '1' : '0');
-      const res = await fetch('/api/yolo/detect', { method: 'POST', body: form });
+      const res = await fetch(apiUrl('/api/yolo/detect'), { method: 'POST', body: form });
       const data: YoloResult = await res.json().catch(() => ({}) as YoloResult);
+      if (looksLikeMissingApi(res)) {
+        setError(describeMissingApi('run detection'));
+        return;
+      }
       if (!res.ok || !data.ok) throw new Error(data.error || 'Detection failed');
       setResult(data);
     } catch (err) {
-      setError((err as Error)?.message || 'Unknown error');
+      setError(describeApiFailure(err));
     } finally {
       setLoading(false);
     }
