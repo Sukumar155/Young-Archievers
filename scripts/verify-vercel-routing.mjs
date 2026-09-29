@@ -1,19 +1,17 @@
 /**
- * verify-vercel-routing.mjs — check the deployed route table against the code.
+ * verify-vercel-routing.mjs — check the deployment wiring without deploying.
  *
- * A live deployment showed /api/health and /api/sos working while
- * /api/auth/otp/request and /api/auth/session 404'd. Dispatcher unit tests could
- * not catch that: they bypass Vercel's routing entirely, so every handler looked
- * reachable no matter how the files were laid out.
+ * Two deployments were measured live before this landed, and both failed in
+ * ways no dispatcher unit test could see:
  *
- * These are the checks that do depend on layout, and they are the ones that fail
- * when a route exists in the code but has no function file behind it:
+ *   api/[[...slug]].ts    /api/health worked, /api/auth/otp/status 404'd
+ *   api/[...path].ts      identical
+ *   api/<dir>/<route>.ts  top-level files deployed, subdirectory files did not
  *
- *   1. every path the dispatcher matches has a generated function file
- *   2. every generated file is a valid Vercel route (no stray file, no wildcard)
- *   3. the generated files are not stale versus the generator
- *   4. vercel.json's SPA rewrite cannot swallow /api/*
- *   5. nothing but underscore-prefixed helpers sits directly in api/
+ * So the checks here are about the wiring, not the handlers: the rewrite must
+ * cover every route, it must not shadow the SPA, the function must sit where
+ * Vercel will actually pick it up, and the path it reconstructs has to match
+ * what the dispatcher matches on.
  */
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -25,35 +23,32 @@ let failures = 0;
 const ok = m => console.log(`  PASS  ${m}`);
 const bad = m => { failures++; console.log(`  FAIL  ${m}`); };
 
-/* ── 1. the dispatcher's routes ─────────────────────────────────────────── */
+/* ── 1. routes the dispatcher exposes ───────────────────────────────────── */
 const server = readFileSync(join(ROOT, 'server', 'sos-server.mjs'), 'utf8');
 
-// Static paths, e.g. `path === '/api/auth/otp/request'`  ->  /api/auth/otp/request
 const staticPaths = new Set();
-for (const m of server.matchAll(/path === '(\/api\/[^']+)'/g)) {
-  staticPaths.add(m[1]);
-}
+for (const m of server.matchAll(/path === '(\/api\/[^']+)'/g)) staticPaths.add(m[1]);
 
-// Parameterised paths, e.g. path.match(/^\/api\/alerts\/([^/]+)$/)
-//   -> /api/alerts/:id
-// Matched by taking the literal text between `^\/api\/` and `\/([^/]+)$` rather
-// than by re-encoding the source regex, which is easy to get subtly wrong.
 const paramPaths = new Set();
 for (const m of server.matchAll(/path\.match\(\/\^\\\/api\\\/([\w-]+)/g)) {
-  // Confirm the tail is the single-id form; a different capture would mean a
-  // route shape this check does not understand.
   const after = server.slice(m.index, m.index + 60);
   if (after.includes('([^/]+)$')) paramPaths.add(`/api/${m[1]}/:id`);
 }
 
-const wanted = new Set([...staticPaths, ...paramPaths]);
-// The root and /api share api/index.ts, so it is satisfied by one file.
-const hasRoot = /path === '\/' \|\| path === '\/api'/.test(server);
-if (hasRoot) wanted.add('/');
+// `/` and `/api` are served by api/index.ts rather than the rewritten function.
+const indexPaths = new Set();
+for (const m of server.matchAll(/path === '(\/[^']*)'/g)) {
+  if (m[1] === '/' ) indexPaths.add(m[1]);
+}
+if (/path === '\/' \|\| path === '\/api'/.test(server)) indexPaths.add('/api');
 
-console.log(`dispatcher exposes ${staticPaths.size} static + ${paramPaths.size} parameterised route(s)\n`);
+const routed = new Set([...staticPaths, ...paramPaths]);
+console.log(`dispatcher: ${staticPaths.size} static, ${paramPaths.size} parameterised, `
+          + `${indexPaths.size} index-served\n`);
 
-/* ── 2. files on disk ───────────────────────────────────────────────────── */
+/* ── 2. api/ layout ─────────────────────────────────────────────────────── */
+console.log('api/ layout');
+
 function walk(dir, base = '') {
   const out = [];
   for (const name of readdirSync(dir)) {
@@ -65,79 +60,87 @@ function walk(dir, base = '') {
   return out;
 }
 
-const files = walk(API);
-const routable = files.filter(f => !f.split('/').some(seg => seg.startsWith('_')));
+const all = walk(API);
+const routable = all.filter(f => !f.split('/').some(s => s.startsWith('_')));
+const nested = routable.filter(f => f.includes('/'));
 
-console.log('layout');
-if (routable.length > 0) ok(`${routable.length} routable function file(s)`);
-else bad('no routable function files in api/');
-
-const wildcards = routable.filter(f => f.includes('...'));
-if (wildcards.length === 0) {
-  ok('no wildcard/catch-all files — nested routes use explicit files');
+if (nested.length === 0) {
+  ok('no function files in subdirectories — only the top level deployed reliably');
 } else {
-  bad(`wildcard file(s) present: ${wildcards.join(', ')} (they deployed as single-segment)`);
+  bad(`function file(s) in subdirectories did not deploy: ${nested.join(', ')}`);
 }
 
-/* ── 3. every dispatcher route has a file ───────────────────────────────── */
-console.log('\nroute coverage');
-const fileFor = routePath => {
-  // The /api prefix is the api/ directory itself, so it is dropped here.
-  //   /api/alerts/:id  -> alerts/[id].ts
-  //   /api/health      -> health.ts
-  //   /  and  /api     -> index.ts   (the browser view of the bridge)
-  if (routePath === '/' || routePath === '/api') return 'index.ts';
-  const rest = routePath.replace(/^\/api\/?/, '');
-  if (!rest) return 'index.ts';
-  const segments = rest.split('/').map(s => (s === ':id' ? '[id]' : s));
-  return `${segments.join('/')}.ts`;
-};
+if (routable.includes('nexora.ts')) ok('api/nexora.ts is the rewritten function');
+else bad('api/nexora.ts missing');
 
-for (const route of [...wanted].sort()) {
-  const file = fileFor(route);
-  if (existsSync(join(API, file))) ok(`${route.padEnd(26)} -> api/${file}`);
-  else bad(`${route.padEnd(26)} -> api/${file}  MISSING`);
-}
-
-/* ── 4. no orphan files ─────────────────────────────────────────────────── */
-console.log('\norphans');
-const expectedFiles = new Set([...wanted].map(fileFor));
-const orphans = routable.filter(f => !expectedFiles.has(f));
-if (orphans.length === 0) ok('no orphaned function files');
-else bad(`orphaned (no matching route): ${orphans.join(', ')}`);
-
-/* ── 5. vercel.json ─────────────────────────────────────────────────────── */
+/* ── 3. the rewrite ─────────────────────────────────────────────────────── */
 console.log('\nvercel.json');
 const vercel = JSON.parse(readFileSync(join(ROOT, 'vercel.json'), 'utf8'));
-if (vercel.outputDirectory === 'dist') ok('outputDirectory is dist');
-else bad(`outputDirectory is "${vercel.outputDirectory}"`);
+const rewrites = vercel.rewrites || [];
 
-const spa = (vercel.rewrites || []).find(r => r.destination === '/index.html');
+const apiRewrite = rewrites.find(r => r.destination && r.destination.includes('/api/nexora'));
+if (apiRewrite) {
+  ok(`rewrite: ${apiRewrite.source}  ->  ${apiRewrite.destination}`);
+  if (/\$[1-9]/.test(apiRewrite.destination)) ok('rewrite forwards the path via $1');
+  else bad(`rewrite destination "${apiRewrite.destination}" does not forward the path`);
+} else {
+  bad('no rewrite mapping /api/* to the function — every API route would 404');
+}
+
+const spa = rewrites.find(r => r.destination === '/index.html');
 if (!spa) bad('no SPA rewrite — client-side routes 404 on refresh');
 else if (/\(\?!api\//.test(spa.source)) ok('SPA rewrite excludes /api/*');
 else bad(`SPA rewrite "${spa.source}" would swallow /api/*`);
 
-if (vercel.functions && Object.keys(vercel.functions).length) {
-  const keys = Object.keys(vercel.functions);
-  const missing = keys.filter(k => !existsSync(join(ROOT, k)));
-  if (missing.length === 0) ok(`functions keys all exist: ${keys.join(', ')}`);
-  else bad(`functions key names a file that does not exist: ${missing.join(', ')}`);
-} else {
-  ok('no functions key — per-file config is used instead');
+// Order matters: the API rewrite has to be tried before the SPA fallback.
+if (apiRewrite && spa) {
+  const iApi = rewrites.indexOf(apiRewrite);
+  const iSpa = rewrites.indexOf(spa);
+  if (iApi < iSpa) ok('API rewrite is listed before the SPA fallback');
+  else bad('SPA fallback is listed before the API rewrite and will shadow it');
 }
 
-/* ── 6. generated files are current ─────────────────────────────────────── */
-console.log('\ngenerator');
-const { execFileSync } = await import('node:child_process');
-try {
-  execFileSync(process.execPath, ['scripts/gen-vercel-routes.mjs', '--check'], {
-    cwd: ROOT, stdio: 'pipe'
-  });
-  ok('generated route files match the generator');
-} catch (e) {
-  bad('generated route files are stale — run: node scripts/gen-vercel-routes.mjs');
+if (vercel.outputDirectory === 'dist') ok('outputDirectory is dist');
+else bad(`outputDirectory is "${vercel.outputDirectory}"`);
+
+/* ── 4. simulate the rewrite against the dispatcher ─────────────────────── */
+console.log('\nrewrite simulation');
+const src = readFileSync(join(API, 'nexora.ts'), 'utf8');
+const rx = apiRewrite?.source
+  ? new RegExp('^' + apiRewrite.source.replace(/^\\\//, '^\\/').replace(/\\\/\(\.\*\)$/, '/(.*)') + '$')
+  : null;
+
+if (!rx) {
+  bad('could not compile the rewrite source for simulation');
+} else {
+  // `/` and `/api` deliberately do not match: the SPA owns `/`, and `/api` is
+  // served by api/index.ts. Only the rewritten routes are asserted here.
+  let matched = 0;
+  for (const route of routed) {
+    if (!rx.test(route)) { bad(`rewrite does not match ${route}`); continue; }
+    matched++;
+  }
+  if (matched === routed.size) ok(`rewrite matches all ${matched} rewritten route(s)`);
+
+  for (const route of indexPaths) {
+    if (rx.test(route)) bad(`rewrite shadows ${route}, which api/index.ts should serve`);
+  }
+  if (indexPaths.size) ok(`api/index.ts serves ${[...indexPaths].join(', ')} (not rewritten)`);
+
+  // The handler must rebuild "/api/<captured>" — the exact form the dispatcher
+  // compares against with `path === '/api/...'`.
+  if (/\/api\/\$\{value/.test(src) || /`\/api\/\$\{/.test(src)) {
+    ok('handler rebuilds /api/<p> from the query parameter');
+  } else {
+    bad('handler does not appear to rebuild /api/<p> — the dispatcher would 404');
+  }
 }
+
+/* ── 5. index.ts covers the root view ───────────────────────────────────── */
+console.log('\nindex route');
+if (existsSync(join(API, 'index.ts'))) ok('api/index.ts exists for /api');
+else bad('api/index.ts missing — /api would 404');
 
 console.log('\n' + '-'.repeat(62));
-console.log(failures === 0 ? 'PASS - every dispatcher route is deployed' : `FAIL - ${failures} check(s)`);
+console.log(failures === 0 ? 'PASS - deployment wiring is sound' : `FAIL - ${failures} check(s)`);
 process.exit(failures === 0 ? 0 : 1);

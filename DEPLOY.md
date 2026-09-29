@@ -7,28 +7,38 @@ Single deployment, on Vercel. The frontend and the API both live there.
 | Path | What | Becomes |
 | --- | --- | --- |
 | `src/` → `dist/` | static React/Vite bundle | the site |
-| `api/**` | one function file per route | every `/api/*` route |
-| `api/_lib/handler.ts` | the shared handler | delegates to `handleRequest` |
+| `api/nexora.ts` | one serverless function | every `/api/*` route |
+| `api/index.ts` | the browsable bridge view | `/api` |
 | `server/sos-server.mjs` | the same dispatcher, as a plain Node server | `npm start`, for local dev |
 
-Each route file is a three-line re-export of `api/_lib/handler.ts`, which calls
-`handleRequest` — the *same* dispatcher `npm start` uses. One routing table, so
-the local server and the deployed functions cannot drift apart.
+`vercel.json` rewrites every API path to the single function, passing the real
+path along:
 
-They are generated. `npm run gen:routes` rewrites them from a table in
-`scripts/gen-vercel-routes.mjs` and deletes any route file no longer in that
-table. `npm run verify:routing` fails if a route exists in the dispatcher but
-has no file behind it.
+```
+/api/auth/otp/status  ->  /api/nexora?p=auth/otp/status
+```
 
-**Why one file per route rather than a catch-all.** A single
-`api/[...path].ts` was tried first and deployed as a single-segment matcher:
-`/api/health` and `/api/sos` worked, while `/api/auth/otp/status` and every
-other nested route returned a 404 that never reached the function. Both
-`[...path]` and `[[...path]]` behaved that way. Explicit files need no wildcard
-interpretation, so there is nothing left to get wrong.
+The handler rebuilds `/api/<p>` and calls `handleRequest` — the *same*
+dispatcher `npm start` uses. One routing table, so the local server and the
+deployed function cannot drift apart.
 
-`vercel.json` routes everything that is not `/api/*` to `index.html` so client
-side routes survive a hard refresh.
+**Why one flat function.** Three layouts were deployed and measured against the
+live site. In every case only routes at the **top level** of `api/` were
+deployed:
+
+| Layout | Result |
+| --- | --- |
+| `api/[[...slug]].ts` | `/api/health` worked, `/api/auth/otp/status` 404'd |
+| `api/[...path].ts` | identical |
+| `api/<dir>/<route>.ts` | top-level files deployed, subdirectory files did not |
+
+So the catch-all was never the problem, and neither was the dispatcher. There is
+now one function, at the top level, reached by an explicit rewrite — nothing
+left for Vercel to interpret.
+
+`/api` itself does not match the rewrite and is served by `api/index.ts`.
+Everything else that is not `/api/*` goes to `index.html`, so client side routes
+survive a hard refresh.
 
 ## What you must set: `DATABASE_URL`
 
@@ -122,7 +132,7 @@ YOLO works.
 ## Checks
 
 ```bash
-npm run verify:routing     # every dispatcher route has a deployed function file
+npm run verify:routing     # the rewrite covers every dispatcher route
 npm run test:serverless    # the dispatcher works in the Vercel request shape
 npm run verify:api-base    # no component bypasses apiUrl()
 npm run verify:sensors     # live sensor feed behaves
@@ -132,9 +142,9 @@ npm run verify:css         # no nested CSS comment terminators
 ```
 
 `verify:routing` is the one that catches deployment-only breakage. It reads the
-route table out of `sos-server.mjs` and checks a function file exists for each
-path, so a route added to the dispatcher but not deployed fails locally instead
-of 404ing in production.
+route table out of `sos-server.mjs` and checks the rewrite matches every path,
+that the SPA fallback cannot shadow it, and that no function file has drifted
+into a subdirectory. Two deployments shipped broken login before it existed.
 
 `test:serverless` drives `handleRequest` with a mock request that has a
 pre-parsed body and no readable stream, which is the shape Vercel delivers — the
