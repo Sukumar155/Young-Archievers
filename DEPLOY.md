@@ -7,14 +7,25 @@ Single deployment, on Vercel. The frontend and the API both live there.
 | Path | What | Becomes |
 | --- | --- | --- |
 | `src/` → `dist/` | static React/Vite bundle | the site |
-| `api/[[...slug]].ts` | one serverless function | every `/api/*` route |
-| `server/sos-server.mjs` | the same handlers, as a plain Node server | `npm start`, for local dev |
+| `api/**` | one function file per route | every `/api/*` route |
+| `api/_lib/handler.ts` | the shared handler | delegates to `handleRequest` |
+| `server/sos-server.mjs` | the same dispatcher, as a plain Node server | `npm start`, for local dev |
 
-`api/[[...slug]].ts` is an optional catch-all, so `/api/health`,
-`/api/auth/otp/request` and `/api/alerts/abc` all reach it with their full path
-intact. It delegates to `handleRequest`, which is the *same* dispatcher
-`npm start` uses — one routing table, so the local server and the deployed
-function cannot drift apart.
+Each route file is a three-line re-export of `api/_lib/handler.ts`, which calls
+`handleRequest` — the *same* dispatcher `npm start` uses. One routing table, so
+the local server and the deployed functions cannot drift apart.
+
+They are generated. `npm run gen:routes` rewrites them from a table in
+`scripts/gen-vercel-routes.mjs` and deletes any route file no longer in that
+table. `npm run verify:routing` fails if a route exists in the dispatcher but
+has no file behind it.
+
+**Why one file per route rather than a catch-all.** A single
+`api/[...path].ts` was tried first and deployed as a single-segment matcher:
+`/api/health` and `/api/sos` worked, while `/api/auth/otp/status` and every
+other nested route returned a 404 that never reached the function. Both
+`[...path]` and `[[...path]]` behaved that way. Explicit files need no wildcard
+interpretation, so there is nothing left to get wrong.
 
 `vercel.json` routes everything that is not `/api/*` to `index.html` so client
 side routes survive a hard refresh.
@@ -111,6 +122,7 @@ YOLO works.
 ## Checks
 
 ```bash
+npm run verify:routing     # every dispatcher route has a deployed function file
 npm run test:serverless    # the dispatcher works in the Vercel request shape
 npm run verify:api-base    # no component bypasses apiUrl()
 npm run verify:sensors     # live sensor feed behaves
@@ -119,7 +131,12 @@ npm run verify:text        # no encoding damage in source
 npm run verify:css         # no nested CSS comment terminators
 ```
 
-`test:serverless` is the important one. It drives `handleRequest` with a mock
-request that has a pre-parsed body and no readable stream, which is the shape
-Vercel actually delivers — the original code subscribed to `req.on('data')` and
-would have hung until the function timed out.
+`verify:routing` is the one that catches deployment-only breakage. It reads the
+route table out of `sos-server.mjs` and checks a function file exists for each
+path, so a route added to the dispatcher but not deployed fails locally instead
+of 404ing in production.
+
+`test:serverless` drives `handleRequest` with a mock request that has a
+pre-parsed body and no readable stream, which is the shape Vercel delivers — the
+original code subscribed to `req.on('data')` and would have hung until the
+function timed out.

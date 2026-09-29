@@ -26,6 +26,7 @@
     "verify:api-base": "node scripts/verify-api-base.mjs",
     "test:serverless": "node scripts/test-serverless.mjs",
     "verify:routing": "node scripts/verify-vercel-routing.mjs",
+    "gen:routes": "node scripts/gen-vercel-routes.mjs",
     "roster": "node scripts/roster.mjs",
     "roster:add": "node scripts/roster.mjs",
     "db:migrate": "node scripts/migrate.mjs",
