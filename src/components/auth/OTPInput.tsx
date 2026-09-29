@@ -86,7 +86,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
           onChange={(e) => handleChange(index, e)}
           onKeyDown={(e) => handleKeyDown(index, e)}
           disabled={disabled}
-          className="w-11 h-12 sm:w-12 sm:h-14 text-center text-[19px] font-semibold font-data text-[#14151A] bg-white border border-[#D4D4CE] rounded-lg focus:border-[#1A3A6B] focus:ring-[3px] focus:ring-[#1A3A6B]/[0.13] transition-[border-color,box-shadow] outline-none disabled:bg-[#F1F1EF] disabled:text-[#6B6D77]"
+          className="w-11 h-12 sm:w-12 sm:h-14 text-center text-[19px] font-semibold font-data text-[#14151A] bg-white border border-[#D4D4CE] rounded-lg focus:border-[#1A3A6B] focus:ring-[3px] focus:ring-[#1A3A6B]/[0.13] transition-[border-color,box-shadow] outline-none disabled:bg-[#F1F1EF] disabled:text-[#6B6D77] dark:text-[#FFFFFF] dark:bg-[#2F2F2F] dark:border-[#4D4D4D]"
         />
       ))}
     </div>

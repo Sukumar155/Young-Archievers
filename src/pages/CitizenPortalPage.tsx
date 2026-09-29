@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { TopBar } from '../components/dashboard/TopBar';
-import { AlertTriangle, Home, Compass, PhoneCall, Send, ArrowRight, ShieldCheck, ExternalLink, Radar, Loader2, MapPin } from 'lucide-react';
+import { AlertTriangle, Home, Compass, PhoneCall, Send, ArrowRight, ShieldCheck, ExternalLink, MapPin } from 'lucide-react';
 import { useNexoraStore } from '../store/useNexoraStore';
 import { getTranslation } from '../i18n/translations';
 import { detectLocation, reverseGeocode, isGeolocationSupported, coordsLabel } from '../services/geolocationService';
 import { LiveSensorStrip } from '../components/shared/LiveSensorStrip';
 import { WeatherStrip } from '../components/weather/WeatherStrip';
+import { SosSignalButton } from '../components/shared/SosSignalButton';
+import { DryCorridorPlanner } from '../components/routing/DryCorridorPlanner';
 
 export const CitizenPortalPage: React.FC = () => {
   const {
@@ -71,29 +73,35 @@ export const CitizenPortalPage: React.FC = () => {
   };
 
   return (
-    <div data-testid="citizen-portal-page" className="min-h-screen text-[#14151A] dark:text-[#F1F1EF] flex flex-col font-body">
+    <div data-testid="citizen-portal-page" className="min-h-screen text-[#14151A] dark:text-[#FFFFFF] flex flex-col font-body">
       <TopBar />
 
       <main className="flex-1 max-w-[1200px] w-full mx-auto p-4 sm:p-6 space-y-6">
         
-        {/* CITIZEN EMERGENCY WARNING BANNER */}
-        <div className="bg-[#FCF1F0] dark:bg-[#2A1614]/30 border border-[#FBE9E7] dark:border-[#4A2622]/60 rounded-xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
+        {/* CITIZEN EMERGENCY WARNING BANNER
+
+            `nx-alert-banner` is not cosmetic. See the matching rule in
+            globals.css: the design-system's bare `h1, .h1` and `p` colour rules
+            are unlayered and therefore outrank Tailwind's layered `text-white`
+            utility under CSS Cascade Level 5, which left this title and
+            description rendering near-black on the red. */}
+        <div className="nx-alert-banner bg-[#C81E1E] dark:bg-[#8C1616] border border-[#A81616] dark:border-[#6A1010] rounded-xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[#FBE9E7] dark:bg-[#2A1614]/40 flex items-center justify-center flex-shrink-0 text-[#B42318] dark:text-[#E0776C]">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-white">
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider bg-[#FBE9E7] dark:bg-[#2A1614]/40 text-[#B42318] dark:text-[#E0776C] px-2.5 py-0.5 rounded-full font-data border border-[#FBE9E7] dark:border-[#4A2622]/60">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider bg-white/20 text-white px-2.5 py-0.5 rounded-full font-data border border-white/30">
                     Official Advisory • SEOC
                   </span>
-                  <span className="w-2 h-2 rounded-full bg-[#B42318] animate-ping" />
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
                 </div>
-                <h1 className="font-heading text-lg sm:text-xl font-bold text-[#14151A] dark:text-[#F1F1EF] mt-1.5">
+                <h1 className="font-heading text-xl sm:text-2xl font-extrabold text-white mt-1.5 tracking-tight">
                   {t('citizen_alert_title', 'Disaster Warning & Safety Guidance')}
                 </h1>
-                <p className="text-xs sm:text-sm text-[#6B6D77] dark:text-[#A1A3AC] mt-1 max-w-2xl leading-relaxed">
+                <p className="text-sm sm:text-[15px] font-medium text-white mt-1.5 max-w-2xl leading-relaxed">
                   {t('citizen_alert_desc', 'Heavy monsoon precipitation is causing river surges in low-lying sectors. Follow safety instructions immediately.')}
                 </p>
               </div>
@@ -101,31 +109,17 @@ export const CitizenPortalPage: React.FC = () => {
 
             <div className="flex flex-col items-stretch sm:items-end gap-2 flex-shrink-0">
               <div className="flex flex-col sm:flex-row gap-2">
-                {/* ONE-TAP SOS SIGNAL — auto-detect location & alert authorities */}
-                <button
-                  onClick={handleSOSSignal}
-                  disabled={sosState === 'LOCATING' || sosState === 'SENDING'}
-                  className="px-5 py-2.5 rounded-xl bg-[#9A1C13] hover:bg-[#8A1A12] text-white font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60 justify-center border-2 border-white/25"
-                  title="Detect your location and send an urgent SOS to the authorities with one tap"
-                >
-                  {sosState === 'LOCATING' || sosState === 'SENDING' ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Radar className="w-4 h-4 animate-pulse" />
-                  )}
-                  <span>
-                    {sosState === 'LOCATING'
-                      ? 'Detecting your location…'
-                      : sosState === 'SENDING'
-                      ? 'Sending SOS…'
-                      : 'SOS Signal'}
-                  </span>
-                </button>
+                {/* SOS SIGNAL — deliberate activation (3 taps or 5s hold) */}
+                <SosSignalButton
+                  onConfirm={handleSOSSignal}
+                  busyState={sosState}
+                  tone="alert"
+                />
 
                 {/* FULL REPORT FORM */}
                 <button
                   onClick={() => toggleIncidentModal(true)}
-                  className="px-5 py-2.5 rounded-xl bg-[#1A3A6B] hover:bg-[#12294D] dark:bg-[#1C1D22] dark:hover:bg-[#2E3038] text-white font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer justify-center border border-[#1A3A6B] dark:border-[#2E3038]"
+                  className="px-5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-2 cursor-pointer justify-center border border-white/40"
                 >
                   <Send className="w-4 h-4" />
                   <span>{t('citizen_report_sos', 'Report Trapped Person (SOS)')}</span>
@@ -135,7 +129,7 @@ export const CitizenPortalPage: React.FC = () => {
               {/* SOS STATUS MESSAGE */}
               {(sosState === 'SENT' || sosState === 'ERROR') && (
                 <div
-                  className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg border flex items-center gap-1.5 max-w-xs ${ sosState === 'SENT' ? 'bg-[#E4F3E9] dark:bg-[#14251F]/50 text-[#126B34] dark:text-[#7CC99A] border-[#E4F3E9] dark:border-[#234133]/60' : 'bg-[#FCF1F0] dark:bg-[#2A1614]/40 text-[#8A1A12] dark:text-[#E89086] border-[#FBE9E7] dark:border-[#4A2622]/60' }`}
+                  className={`text-[11px] font-semibold px-3 py-1.5 rounded-lg border flex items-center gap-1.5 max-w-xs ${ sosState === 'SENT' ? 'bg-white/95 text-[#126B34] border-white' : 'bg-white/95 text-[#A31616] border-white' }`}
                 >
                   {sosState === 'SENT' ? (
                     <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
@@ -164,16 +158,16 @@ export const CitizenPortalPage: React.FC = () => {
           {/* Tile 1: Report Emergency */}
           <div
             onClick={() => toggleIncidentModal(true)}
-            className="p-5 rounded-xl bg-white dark:bg-[#17181C] border border-[#FBE9E7] dark:border-[#2E3038] hover:border-[#B42318] dark:hover:text-[#E0776C] shadow-xs hover:shadow-card transition-all cursor-pointer group"
+            className="p-5 rounded-xl bg-white dark:bg-[#1E3A5F] border border-[#FCF1F0] dark:border-[#B4B4B4] hover:border-[#B42318] dark:hover:text-[#E0776C] shadow-xs hover:shadow-card transition-all cursor-pointer group"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#FBE9E7] dark:bg-[#2A1614]/40 text-[#B42318] dark:text-[#E0776C] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-[#FCF1F0] dark:bg-[#3F1414]/40 text-[#B42318] dark:text-[#C0C0C0] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <AlertTriangle className="w-5 h-5" />
             </div>
-            <h2 className="font-heading font-bold text-sm text-[#14151A] dark:text-[#F1F1EF]">{t('report_incident', 'Report Emergency')}</h2>
-            <p className="text-xs text-[#6B6D77] dark:text-[#A1A3AC] mt-1">
+            <h2 className="font-heading font-bold text-sm text-[#14151A] dark:text-[#FFFFFF]">{t('report_incident', 'Report Emergency')}</h2>
+            <p className="text-xs text-[#5A5C66] dark:text-[#D0D0D0] mt-1">
               {t('citizen_report_sos', 'Report stranded family, trapped individuals or urgent medical needs.')}
             </p>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-[#B42318] dark:text-[#E0776C] mt-3">
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-[#B42318] dark:text-[#C0C0C0] mt-3">
               <span>SOS Form</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </span>
@@ -183,16 +177,16 @@ export const CitizenPortalPage: React.FC = () => {
               camps by real distance from the visitor's own location. */}
           <div
             onClick={() => setCurrentView('CITIZEN_SHELTERS')}
-            className="p-5 rounded-xl bg-white dark:bg-[#17181C] border border-[#E4F3E9] dark:border-[#2E3038] hover:border-[#126B34] dark:hover:border-[#5BBF7A] shadow-xs hover:shadow-card transition-all cursor-pointer group"
+            className="p-5 rounded-xl bg-white dark:bg-[#1E3A5F] border border-[#E4F3E9] dark:border-[#B4B4B4] hover:border-[#126B34] dark:hover:border-[#5BBF7A] shadow-xs hover:shadow-card transition-all cursor-pointer group"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#E4F3E9] dark:bg-[#14251F]/40 text-[#126B34] dark:text-[#5BBF7A] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-[#E4F3E9] dark:bg-[#0A2E22]/40 text-[#126B34] dark:text-[#D0D0D0] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <Home className="w-5 h-5" />
             </div>
-            <h2 className="font-heading font-bold text-sm text-[#14151A] dark:text-[#F1F1EF]">{t('citizen_find_shelter', 'Find Safe Shelter')}</h2>
-            <p className="text-xs text-[#6B6D77] dark:text-[#A1A3AC] mt-1">
+            <h2 className="font-heading font-bold text-sm text-[#14151A] dark:text-[#FFFFFF]">{t('citizen_find_shelter', 'Find Safe Shelter')}</h2>
+            <p className="text-xs text-[#5A5C66] dark:text-[#D0D0D0] mt-1">
               Locate designated relief camps with free beds, water, food and first aid.
             </p>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-[#126B34] dark:text-[#5BBF7A] mt-3">
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-[#126B34] dark:text-[#D0D0D0] mt-3">
               <span>View Camps</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </span>
@@ -201,16 +195,16 @@ export const CitizenPortalPage: React.FC = () => {
           {/* Tile 3: Live Threat Map */}
           <div
             onClick={() => setCurrentView('CITIZEN_MAP')}
-            className="p-5 rounded-xl bg-white dark:bg-[#17181C] border border-[#DEDEDA] dark:border-[#2E3038] hover:border-[#1A3A6B] dark:hover:border-[#5B7BA8] shadow-xs hover:shadow-card transition-all cursor-pointer group"
+            className="p-5 rounded-xl bg-white dark:bg-[#1E3A5F] border border-[#E4E4E0] dark:border-[#B4B4B4] hover:border-[#1A3A6B] dark:hover:border-[#5B7BA8] shadow-xs hover:shadow-card transition-all cursor-pointer group"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#EEF2F8] dark:bg-[#0D0E12] text-[#1A3A6B] dark:text-[#9DB8DC] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-[#EEF2F8] dark:bg-[#171717] text-[#1A3A6B] dark:text-[#D0D0D0] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
               <Compass className="w-5 h-5" />
             </div>
-            <h2 className="font-heading font-bold text-sm text-[#14151A] dark:text-[#F1F1EF]">{t('citizen_threat_map', 'Live Threat Map')}</h2>
-            <p className="text-xs text-[#6B6D77] dark:text-[#A1A3AC] mt-1">
+            <h2 className="font-heading font-bold text-sm text-[#14151A] dark:text-[#FFFFFF]">{t('citizen_threat_map', 'Live Threat Map')}</h2>
+            <p className="text-xs text-[#5A5C66] dark:text-[#D0D0D0] mt-1">
               Inspect live inundation zones, flooded roads and high safe grounds.
             </p>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-[#1A3A6B] dark:text-[#9DB8DC] mt-3">
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-[#1A3A6B] dark:text-[#D0D0D0] mt-3">
               <span>Open Map</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </span>
@@ -218,17 +212,23 @@ export const CitizenPortalPage: React.FC = () => {
 
         </div>
 
+        {/* SAFE EVACUATION ROUTE — the dry-corridor planner, same component the
+            authority Evacuation page uses. It measures the live roadblock list
+            against your path and detours around anything flooded, and it tells
+            you plainly when a route is not safe. */}
+        <DryCorridorPlanner tone="citizen" />
+
         {/* NEARBY SAFE SHELTERS & SAFE ROUTE */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Shelters List */}
-          <div id="citizen-shelter-list" className="lg:col-span-7 bg-white dark:bg-[#17181C] rounded-xl border border-[#DEDEDA] dark:border-[#2E3038] p-5 sm:p-6 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-[#DEDEDA] dark:border-[#2E3038] pb-3">
+          <div id="citizen-shelter-list" className="lg:col-span-7 bg-white dark:bg-[#1E3A5F] rounded-xl border border-[#E4E4E0] dark:border-[#B4B4B4] p-5 sm:p-6 space-y-4 shadow-xs">
+            <div className="flex items-center justify-between border-b border-[#E4E4E0] dark:border-[#B4B4B4] pb-3">
               <div>
-                <h2 className="font-heading font-bold text-base text-[#14151A] dark:text-[#F1F1EF]">
+                <h2 className="font-heading font-bold text-base text-[#14151A] dark:text-[#FFFFFF]">
                   {t('citizen_shelters_title', 'Nearest Available Relief Shelters')}
                 </h2>
-                <p className="text-xs text-[#6B6D77] dark:text-[#A1A3AC]">
+                <p className="text-xs text-[#5A5C66] dark:text-[#D0D0D0]">
                   {t('citizen_shelters_desc', 'Designated high-elevation flood camps with power backup & medical staff')}
                 </p>
               </div>
@@ -240,20 +240,20 @@ export const CitizenPortalPage: React.FC = () => {
                 return (
                   <div
                     key={shelter.id}
-                    className="p-4 rounded-xl border border-[#DEDEDA] dark:border-[#2E3038] bg-[#F1F1EF] dark:bg-[#0D0E12] hover:bg-white dark:hover:bg-[#1C1D22] hover:border-[#E4F3E9] dark:hover:border-[#5B7BA8]/50 transition-all space-y-2.5"
+                    className="p-4 rounded-xl border border-[#E4E4E0] dark:border-[#B4B4B4] bg-[#F1F1EF] dark:bg-[#171717] hover:bg-white dark:hover:bg-[#14151A] hover:border-[#E4F3E9] dark:hover:border-[#5B7BA8]/50 transition-all space-y-2.5"
                   >
                     <div className="flex items-start justify-between gap-2 flex-wrap sm:flex-nowrap">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-[#12294D] dark:text-[#5BBF7A] bg-[#E4F3E9] dark:bg-[#14251F]/60 border border-[#E4F3E9] dark:border-[#234133]/60 px-2 py-0.5 rounded font-data">
+                          <span className="text-xs font-bold text-[#12294D] dark:text-[#D0D0D0] bg-[#E4F3E9] dark:bg-[#0A2E22]/60 border border-[#E4F3E9] dark:border-[#14532D]/60 px-2 py-0.5 rounded font-data">
                             {freeBeds} {t('citizen_free_beds', 'Free Beds')}
                           </span>
-                          <span className="text-xs text-[#6B6D77] dark:text-[#A1A3AC] font-data">Distance: ~1.8 km</span>
+                          <span className="text-xs text-[#5A5C66] dark:text-[#D0D0D0] font-data">Distance: ~1.8 km</span>
                         </div>
-                        <h3 className="font-heading font-bold text-sm text-[#14151A] dark:text-[#F1F1EF] mt-1">
+                        <h3 className="font-heading font-bold text-sm text-[#14151A] dark:text-[#FFFFFF] mt-1">
                           {shelter.name}
                         </h3>
-                        <p className="text-xs text-[#6B6D77] dark:text-[#A1A3AC]">{shelter.address}</p>
+                        <p className="text-xs text-[#5A5C66] dark:text-[#D0D0D0]">{shelter.address}</p>
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-shrink-0 self-start sm:self-center">
@@ -265,7 +265,7 @@ export const CitizenPortalPage: React.FC = () => {
                             });
                             setCurrentView('CITIZEN_MAP');
                           }}
-                          className="px-3 py-1.5 rounded-lg bg-[#1A3A6B] dark:bg-[#1C1D22] hover:bg-[#12294D] dark:hover:bg-[#2E3038] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border border-[#1A3A6B] dark:border-[#2E3038]"
+                          className="px-3 py-1.5 rounded-lg bg-[#1A3A6B] dark:bg-[#ECECEC] hover:bg-[#12294D] dark:hover:bg-[#2E3038] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border border-[#1A3A6B] dark:border-[#B4B4B4]"
                         >
                           <Compass className="w-3.5 h-3.5 text-white" />
                           <span>{t('citizen_safe_route', 'Safe Route')}</span>
@@ -285,7 +285,7 @@ export const CitizenPortalPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-[#DEDEDA] dark:border-[#2E3038] flex items-center justify-between text-[11px] text-[#6B6D77] dark:text-[#A1A3AC] font-data">
+                    <div className="pt-2 border-t border-[#E4E4E0] dark:border-[#B4B4B4] flex items-center justify-between text-[11px] text-[#5A5C66] dark:text-[#D0D0D0] font-data">
                       <span>{t('citizen_food', 'Food')}: {shelter.resources.foodPackets} packs</span>
                       <span>{t('citizen_water', 'Drinking Water')}: {shelter.resources.waterLiters}L</span>
                       <span>{t('citizen_med', 'Medical Facility')}: {shelter.hasMedicalFacility ? 'Available' : 'First Aid Only'}</span>
@@ -300,42 +300,42 @@ export const CitizenPortalPage: React.FC = () => {
           <div className="lg:col-span-5 space-y-4">
             
             {/* Toll-Free Helplines */}
-            <div className="bg-white dark:bg-[#17181C] rounded-xl border border-[#DEDEDA] dark:border-[#2E3038] p-5 space-y-3 shadow-xs">
-              <h3 className="font-heading font-bold text-sm text-[#14151A] dark:text-[#F1F1EF] flex items-center gap-2">
-                <PhoneCall className="w-4 h-4 text-[#1A3A6B] dark:text-[#9DB8DC]" />
+            <div className="bg-white dark:bg-[#1E3A5F] rounded-xl border border-[#E4E4E0] dark:border-[#B4B4B4] p-5 space-y-3 shadow-xs">
+              <h3 className="font-heading font-bold text-sm text-[#14151A] dark:text-[#FFFFFF] flex items-center gap-2">
+                <PhoneCall className="w-4 h-4 text-[#1A3A6B] dark:text-[#D0D0D0]" />
                 {t('citizen_helplines', 'Emergency Helpline Directory (24x7)')}
               </h3>
               
               <div className="space-y-2 text-xs font-data">
-                <div className="flex items-center justify-between bg-[#F1F1EF] dark:bg-[#0D0E12] p-2.5 rounded-xl border border-[#DEDEDA] dark:border-[#2E3038]">
-                  <span className="font-bold text-[#14151A] dark:text-[#F1F1EF]">National Disaster Response (NDRF)</span>
-                  <a href="tel:1078" className="font-bold text-[#B42318] dark:text-[#E0776C] text-sm hover:underline">1078</a>
+                <div className="flex items-center justify-between bg-[#F1F1EF] dark:bg-[#171717] p-2.5 rounded-xl border border-[#E4E4E0] dark:border-[#B4B4B4]">
+                  <span className="font-bold text-[#14151A] dark:text-[#FFFFFF]">National Disaster Response (NDRF)</span>
+                  <a href="tel:1078" className="font-bold text-[#B42318] dark:text-[#C0C0C0] text-sm hover:underline">1078</a>
                 </div>
 
-                <div className="flex items-center justify-between bg-[#F1F1EF] dark:bg-[#0D0E12] p-2.5 rounded-xl border border-[#DEDEDA] dark:border-[#2E3038]">
-                  <span className="font-bold text-[#14151A] dark:text-[#F1F1EF]">Emergency Medical / Ambulance</span>
-                  <a href="tel:108" className="font-bold text-[#1A3A6B] dark:text-[#9DB8DC] text-sm hover:underline">108</a>
+                <div className="flex items-center justify-between bg-[#F1F1EF] dark:bg-[#171717] p-2.5 rounded-xl border border-[#E4E4E0] dark:border-[#B4B4B4]">
+                  <span className="font-bold text-[#14151A] dark:text-[#FFFFFF]">Emergency Medical / Ambulance</span>
+                  <a href="tel:108" className="font-bold text-[#1A3A6B] dark:text-[#D0D0D0] text-sm hover:underline">108</a>
                 </div>
 
-                <div className="flex items-center justify-between bg-[#F1F1EF] dark:bg-[#0D0E12] p-2.5 rounded-xl border border-[#DEDEDA] dark:border-[#2E3038]">
-                  <span className="font-bold text-[#14151A] dark:text-[#F1F1EF]">State Disaster Management Cell</span>
-                  <a href="tel:1070" className="font-bold text-[#126B34] dark:text-[#5BBF7A] text-sm hover:underline">1070</a>
+                <div className="flex items-center justify-between bg-[#F1F1EF] dark:bg-[#171717] p-2.5 rounded-xl border border-[#E4E4E0] dark:border-[#B4B4B4]">
+                  <span className="font-bold text-[#14151A] dark:text-[#FFFFFF]">State Disaster Management Cell</span>
+                  <a href="tel:1070" className="font-bold text-[#126B34] dark:text-[#D0D0D0] text-sm hover:underline">1070</a>
                 </div>
 
-                <div className="flex items-center justify-between bg-[#F1F1EF] dark:bg-[#0D0E12] p-2.5 rounded-xl border border-[#DEDEDA] dark:border-[#2E3038]">
-                  <span className="font-bold text-[#14151A] dark:text-[#F1F1EF]">Police Emergency Helpline</span>
-                  <a href="tel:112" className="font-bold text-[#14151A] dark:text-[#F1F1EF] text-sm hover:underline">112</a>
+                <div className="flex items-center justify-between bg-[#F1F1EF] dark:bg-[#171717] p-2.5 rounded-xl border border-[#E4E4E0] dark:border-[#B4B4B4]">
+                  <span className="font-bold text-[#14151A] dark:text-[#FFFFFF]">Police Emergency Helpline</span>
+                  <a href="tel:112" className="font-bold text-[#14151A] dark:text-[#FFFFFF] text-sm hover:underline">112</a>
                 </div>
               </div>
             </div>
 
             {/* Dos and Don'ts */}
-            <div className="bg-[#EEF2F8]/50 dark:bg-[#0D0E12] border border-[#1A3A6B]/30 dark:border-[#2E3038] p-5 rounded-xl space-y-2.5 text-xs text-[#14151A] dark:text-[#F1F1EF]">
-              <div className="font-bold flex items-center gap-1.5 text-[#14151A] dark:text-[#F1F1EF]">
-                <ShieldCheck className="w-4 h-4 text-[#126B34] dark:text-[#5BBF7A]" />
+            <div className="bg-[#EEF2F8]/50 dark:bg-[#171717] border border-[#1A3A6B]/30 dark:border-[#B4B4B4] p-5 rounded-xl space-y-2.5 text-xs text-[#14151A] dark:text-[#FFFFFF]">
+              <div className="font-bold flex items-center gap-1.5 text-[#14151A] dark:text-[#FFFFFF]">
+                <ShieldCheck className="w-4 h-4 text-[#126B34] dark:text-[#D0D0D0]" />
                 <span>{t('citizen_safety_title', 'Flood Safety Instructions:')}</span>
               </div>
-              <ul className="space-y-1.5 text-[#6B6D77] dark:text-[#A1A3AC] pl-4 list-disc text-[11px] leading-relaxed">
+              <ul className="space-y-1.5 text-[#5A5C66] dark:text-[#D0D0D0] pl-4 list-disc text-[11px] leading-relaxed">
                 <li>Turn off main electrical breaker and gas cylinders before leaving home.</li>
                 <li>Do not attempt to walk or drive through flowing floodwaters (even 15cm can sweep you off feet).</li>
                 <li>Keep mobile phones charged and conserve battery for emergency calls.</li>

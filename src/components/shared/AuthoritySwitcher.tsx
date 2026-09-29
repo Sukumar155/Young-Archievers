@@ -27,7 +27,7 @@ export const AuthoritySwitcher: React.FC<{ className?: string }> = ({ className 
     <div
       role="radiogroup"
       aria-label="Authority workspace"
-      className={`flex items-center gap-0.5 p-0.5 rounded-lg bg-[#F4F4F1] border border-[#DEDEDA] dark:bg-[#1A1B20] dark:border-[#2E3038] ${className ?? ''}`}
+      className={`flex items-center gap-0.5 p-0.5 rounded-lg bg-[#F4F4F1] border border-[#DEDEDA] dark:bg-[#262626] dark:border-[#B4B4B4] ${className ?? ''}`}
     >
       {OPTIONS.map((opt) => {
         const Icon = opt.icon;
@@ -43,10 +43,10 @@ export const AuthoritySwitcher: React.FC<{ className?: string }> = ({ className 
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
               active
                 ? 'bg-[#1A3A6B] text-white shadow-sm shadow-[#1A3A6B]/25 font-bold'
-                : 'text-[#5A5C66] dark:text-[#A1A3AC] hover:text-[#1A3A6B] dark:hover:text-white hover:bg-white/70 dark:hover:bg-white/10'
+                : 'text-[#5A5C66] dark:text-[#D0D0D0] hover:text-[#1A3A6B] dark:hover:text-white hover:bg-white/70 dark:hover:bg-white/10'
             }`}
           >
-            <Icon className={`w-3 h-3 ${active ? 'text-white' : 'text-[#74767F] dark:text-[#A1A3AC]'}`} />
+            <Icon className={`w-3 h-3 ${active ? 'text-white' : 'text-[#74767F] dark:text-[#D0D0D0]'}`} />
             <span>{opt.label}</span>
           </button>
         );

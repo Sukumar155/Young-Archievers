@@ -10,8 +10,9 @@ import { EmergencyResourceItem, ResourceDispatchLog } from '../types/resource';
 import { EmergencyHospital, SafeEvacuationRoute } from '../types/hospital';
 import { HourlyTrendPoint } from '../types/analytics';
 import { SupportedLanguage } from '../i18n/translations';
-import { submitBeacon, type ServerSOS, type SosServerStatus } from '../services/sosApi';
+import { submitBeacon, broadcastAlert, setAlertActive, fetchAlerts, fileIncident, triageSOS, type ServerSOS, type SosServerStatus } from '../services/sosApi';
 import { haversineKm, estimateTravel, bearingDeg, compassLabel } from '../services/geolocationService';
+import { planDryCorridor } from '../services/corridorPlanner';
 import {
   fetchWeather,
   simulatedWeather,
@@ -58,7 +59,8 @@ export type AppView =
   | 'SHELTER_EVACUATION' 
   | 'EMERGENCY_RESOURCES' 
   | 'DAMAGE_DETECTION' 
-  | 'CITIZEN_PORTAL' 
+  | 'CITIZEN_PORTAL'
+  | 'YOLO_PREDICT'
   | 'CITIZEN_MAP'
   | 'CITIZEN_SHELTERS'
   | 'ANALYTICS' 
@@ -167,7 +169,15 @@ interface NexoraState {
 
   // Alerts & Warnings
   broadcastNewAlert: (newAlert: Omit<DisasterAlert, 'id' | 'timestamp' | 'active'>) => void;
+  /** Resolve a bulletin: drops it from the active feed, decrements the
+   *  notification badge, and files it in the 24-hour history strip. */
   dismissAlert: (alertId: string) => void;
+  /** Re-open a resolved bulletin. */
+  restoreAlert: (alertId: string) => void;
+  /** Delete resolved bulletins older than 24 hours. */
+  purgeExpiredAlertHistory: () => void;
+  /** Pull bulletins from the server so the active feed and history survive a reload. */
+  hydrateAlerts: () => Promise<void>;
 
   // Drone AI Damage Detection
   pinDamageToMap: (scanId: string) => void;
@@ -213,7 +223,7 @@ interface NexoraState {
   setCommTier: (tier: CommTier) => void;
   toggleOfflineMode: () => void;
   toggleSensorStreaming: () => void;
-  /** Advance the 5 live metrics by one random-walk step (called every 5s). */
+  /** Advance the 6 live metrics by one random-walk step (called every 5s). */
   sensorTick: () => void;
   /**
    * Refresh live weather for the current district.
@@ -1000,16 +1010,23 @@ function defaultNameFor(role: UserRole): string {
 const savedSession = readSession();
 
 /**
- * Seed for the 5 headline live readings, aligned with the scenario telemetry
+ * Seed for the 6 headline live readings, aligned with the scenario telemetry
  * below (river 49.32m vs a 49.68m danger mark, rain 68mm/h, wind 41km/h).
  * `vol` is the random-walk step size per tick and `min`/`max` bound it.
+ *
+ * AQI follows India's CPCB scale (0-50 Good, 51-100 Satisfactory, 101-200
+ * Moderate, 201-300 Poor, 301-400 Very Poor, 401-500 Severe). `dangerAt: 200`
+ * is the Moderate/Poor boundary, which is where a respiratory hazard starts
+ * mattering for people sheltering indoors with generators running. The walk is
+ * deliberately slow — air quality has far more inertia than rainfall.
  */
 const INITIAL_LIVE_METRICS: LiveSensorMetric[] = [
   { id: 'water',    label: 'River Level',  value: 49.32, unit: 'm',    precision: 2, min: 48.90, max: 50.20, dangerAt: 49.68, delta: 0,    trend: 'flat', ageSec: 0 },
   { id: 'rain',     label: 'Rainfall',     value: 68,    unit: 'mm/h', precision: 0, min: 12,    max: 118,   dangerAt: 80,    delta: 0,    trend: 'flat', ageSec: 0 },
   { id: 'wind',     label: 'Wind Speed',   value: 41,    unit: 'km/h', precision: 0, min: 6,     max: 92,    dangerAt: 65,    delta: 0,    trend: 'flat', ageSec: 0 },
   { id: 'humidity', label: 'Humidity',     value: 88,    unit: '%',    precision: 0, min: 55,    max: 99,    dangerAt: 95,    delta: 0,    trend: 'flat', ageSec: 0 },
-  { id: 'temp',     label: 'Temperature',  value: 29.2,  unit: '°C',   precision: 1, min: 24.0,  max: 34.5,  dangerAt: 32,    delta: 0,    trend: 'flat', ageSec: 0 }
+  { id: 'temp',     label: 'Temperature',  value: 29.2,  unit: '°C',   precision: 1, min: 24.0,  max: 34.5,  dangerAt: 32,    delta: 0,    trend: 'flat', ageSec: 0 },
+  { id: 'aqi',      label: 'Air Quality',  value: 96,    unit: 'AQI',  precision: 0, min: 40,    max: 240,   dangerAt: 200,   delta: 0,    trend: 'flat', ageSec: 0 }
 ];
 
 /** Per-metric random-walk step sizes, matched to each scale. */
@@ -1018,7 +1035,8 @@ const METRIC_VOLATILITY: Record<string, number> = {
   rain: 3.2,
   wind: 2.4,
   humidity: 1.6,
-  temp: 0.18
+  temp: 0.18,
+  aqi: 3
 };
 
 /** 48 samples x 30 minutes = a rolling 24-hour hydrograph window. */
@@ -1088,8 +1106,57 @@ const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n
  * rather than saturating. The predictor still reports any out-of-domain input
  * (typically river discharge) via its warnings.
  */
-const DISTRICT_SITES: Record<string, DistrictSite> = {
-  'Chennai Coastal Metropolitan Area': {
+/* ---------------- offline field-action queue (real persistence) ---------------- */
+
+const OFFLINE_QUEUE_KEY = 'nexora_offline_queue';
+
+/** Resolved bulletins are kept in the history strip for 24 hours, then deleted. */
+const ALERT_HISTORY_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface QueuedFieldAction {
+  id: string;
+  description: string;
+  queuedAt: string;
+  synced: boolean;
+}
+
+function readOfflineQueue(): QueuedFieldAction[] {
+  try {
+    const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The one definition of "how many unread notifications are there".
+ *
+ * Every surface that shows a count — the top-bar bell, the "N Active" pill, the
+ * Alerts feed header — derives from `alerts.filter(a => a.active).length`.
+ * `notificationCount` is kept in the store only so components can read it
+ * without recomputing, and it is always WRITTEN through this function.
+ *
+ * It used to be maintained by hand in eleven places with `+1` / `-1`, eight of
+ * which had nothing to do with alerts (an ingested SOS report, a breach
+ * simulation). That made the bell and the active feed disagree permanently,
+ * because an integer that is only ever nudged can never recover the truth.
+ */
+function countActive(alerts: Array<{ active: boolean }>): number {
+  return alerts.reduce((n, a) => (a.active ? n + 1 : n), 0);
+}
+
+function writeOfflineQueue(actions: QueuedFieldAction[]) {
+  try {
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(actions));
+  } catch {
+    /* private mode / quota — the in-memory counter still updates */
+  }
+}
+
+const DISTRICT_SITES: Record<string, DistrictSite> = {  'Chennai Coastal Metropolitan Area': {
     latitude: 13.0827,
     longitude: 80.2707,
     elevationM: 8,
@@ -1185,7 +1252,11 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
   isIncidentModalOpen: false,
   isResourceDispatchModalOpen: false,
   activePlanCommitted: false,
-  notificationCount: 3,
+  // Derived from INITIAL_ALERTS rather than hard-coded, so the bell cannot start
+  // out of step with the active feed. It happened to agree at 3, but only by
+  // coincidence — adding a seed alert without editing this number would have
+  // reintroduced the mismatch on the very first paint.
+  notificationCount: countActive(INITIAL_ALERTS),
 
   responderMissionStatus: "ASSIGNED",
 
@@ -1342,6 +1413,9 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
         return report;
       })
     }));
+    void triageSOS(id, { priorityScore: newScore, note: reason }).catch((err) => {
+      console.warn('[store] priority override not persisted:', err?.message ?? err);
+    });
   },
 
   markFalseAlarm: (id: string) => {
@@ -1351,6 +1425,11 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
       ),
       isDetailOpen: false
     }));
+    // Persist: this used to be browser-only, so a report dismissed as a false
+    // alarm came back from the server on the next load.
+    void triageSOS(id, { status: 'FALSE_ALARM' }).catch((err) => {
+      console.warn('[store] false-alarm flag not persisted:', err?.message ?? err);
+    });
   },
 
   approveResponsePlan: (sosId: string, teamId: string, shelterId: string) => {
@@ -1366,8 +1445,26 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
     }));
   },
 
+  /**
+   * Reject the proposed dispatch plan.
+   *
+   * This previously only closed the panel and discarded `sosId`, so a rejected
+   * plan left no trace — the SOS stayed PENDING with no indication that an
+   * officer had already reviewed and declined it. The decision is now recorded
+   * on the report.
+   */
   rejectResponsePlan: (sosId: string) => {
-    set({ isResponsePlanOpen: false });
+    set(state => ({
+      isResponsePlanOpen: false,
+      activePlanCommitted: false,
+      // A rejected plan is not a dispatch, so drop any team assignment that a
+      // previous approval had attached to this report.
+      sosReports: state.sosReports.map(r =>
+        r.id === sosId
+          ? { ...r, assignedTeamId: undefined, assignedShelterId: undefined }
+          : r
+      ),
+    }));
   },
 
   broadcastNewAlert: (newAlertData) => {
@@ -1377,16 +1474,135 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
       timestamp: "Just now",
       active: true
     };
-    set(state => ({
-      alerts: [newAlert, ...state.alerts],
-      notificationCount: state.notificationCount + 1
-    }));
+    set(state => {
+      const alerts = [newAlert, ...state.alerts];
+      return { alerts, notificationCount: countActive(alerts) };
+    });
+
+    // Persist server-side so the bulletin survives a reload and is visible to
+    // other sessions. Previously this only touched local state while the UI
+    // claimed it had reached carriers. Fire-and-forget: the local alert is
+    // already in the feed, and a failure must not block the operator.
+    void broadcastAlert({ ...newAlertData }).catch((err) => {
+      console.warn('[store] CAP broadcast not persisted:', err?.message ?? err);
+    });
   },
 
   dismissAlert: (alertId: string) => {
-    set(state => ({
-      alerts: state.alerts.map(a => a.id === alertId ? { ...a, active: false } : a)
-    }));
+    // Resolve must be visible immediately, and the "N Active" pill, the history
+    // strip and the top-bar bell must all move together.
+    //
+    // `notificationCount` is no longer arithmetic. It is RECOMPUTED from the
+    // alert list on every write (see `syncNotificationCount`), because the
+    // integer used to be nudged with +1 / -1 in eleven separate places. Eight
+    // of those touched nothing but the counter, so the bell drifted away from
+    // the active feed permanently: an SOS report arriving, or a simulation
+    // firing, incremented a number that has no relationship to `alerts`.
+    set(state => {
+      const target = state.alerts.find((a) => a.id === alertId);
+      if (!target || !target.active) return state; // already resolved — no double-decrement
+      const alerts = state.alerts.map((a) =>
+        a.id === alertId
+          ? { ...a, active: false, resolvedAt: new Date().toISOString(), resolvedBy: state.userName }
+          : a
+      );
+      return { alerts, notificationCount: countActive(alerts) };
+    });
+    void setAlertActive(alertId, false).catch((err) => {
+      console.warn('[store] alert resolve not persisted:', err?.message ?? err);
+    });
+  },
+
+  /**
+   * Re-activate a resolved bulletin. Re-opens it in the active feed and puts
+   * the notification back — the inverse of dismissAlert.
+   */
+  restoreAlert: (alertId: string) => {
+    set(state => {
+      const target = state.alerts.find((a) => a.id === alertId);
+      if (!target || target.active) return state;
+      const alerts = state.alerts.map((a) =>
+        a.id === alertId ? { ...a, active: true, resolvedAt: null, resolvedBy: null } : a
+      );
+      return { alerts, notificationCount: countActive(alerts) };
+    });
+    void setAlertActive(alertId, true).catch((err) => {
+      console.warn('[store] alert restore not persisted:', err?.message ?? err);
+    });
+  },
+
+  /**
+   * Drop resolved bulletins once they pass the 24-hour retention window.
+   * Active bulletins are never touched, however old they are.
+   */
+  purgeExpiredAlertHistory: () => {
+    const cutoff = Date.now() - ALERT_HISTORY_TTL_MS;
+    set(state => {
+      const keep = state.alerts.filter(
+        (a) => a.active || !a.resolvedAt || new Date(a.resolvedAt).getTime() > cutoff
+      );
+      if (keep.length === state.alerts.length) return state;
+      const dropped = state.alerts.length - keep.length;
+      if (dropped > 0) {
+        console.log(`[store] alert history: dropped ${dropped} resolved bulletin(s) past 24h`);
+      }
+      return { alerts: keep };
+    });
+  },
+
+  /**
+   * Merge server-side bulletins into the store.
+   *
+   * Without this, resolving an alert only ever changed local state — a reload
+   * brought the resolved bulletin back as "active" and lost the history
+   * entirely. Server records win on id match; anything only in the seed data
+   * (which was never broadcast) is left alone.
+   */
+  hydrateAlerts: async () => {
+    try {
+      const remote = await fetchAlerts(200);
+      if (!remote.length) return;
+
+      set(state => {
+        const byId = new Map(state.alerts.map((a) => [a.id, a]));
+        for (const r of remote) {
+          const existing = byId.get(r.id);
+          // A locally-seeded alert has no server counterpart, so only adopt
+          // server rows we do not already know about, and overlay the
+          // resolved state onto ones we do.
+          if (existing) {
+            byId.set(r.id, {
+              ...existing,
+              active: r.active,
+              resolvedAt: (r as { resolvedAt?: string | null }).resolvedAt ?? existing.resolvedAt ?? null,
+              resolvedBy: (r as { resolvedBy?: string | null }).resolvedBy ?? existing.resolvedBy ?? null,
+            });
+          } else {
+            byId.set(r.id, {
+              ...r,
+              locationName: r.locationName ?? '',
+              lat: r.lat ?? 0,
+              lng: r.lng ?? 0,
+              issuedBy: r.issuedByRole ?? 'SEOC',
+              channels: (r.channels ?? []) as DisasterAlert['channels'],
+              severity: r.severity as DisasterAlert['severity'],
+              resolvedAt: (r as { resolvedAt?: string | null }).resolvedAt ?? null,
+            });
+          }
+        }
+        const merged = Array.from(byId.values());
+        // Recompute, never take the max. `Math.max(activeCount, state…)` let a
+        // stale, higher integer win, so after the server returned a shorter
+        // active list the bell kept showing the old number — the exact drift
+        // this whole field was meant to prevent.
+        return {
+          alerts: merged,
+          notificationCount: countActive(merged),
+        };
+      });
+    } catch (err) {
+      console.warn('[store] could not hydrate alerts:', (err as Error)?.message ?? err);
+    }
   },
 
   pinDamageToMap: (scanId: string) => {
@@ -1406,10 +1622,13 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
 
       return {
         damageScans: state.damageScans.map(s => s.id === scanId ? { ...s, pinnedToMap: true } : s),
-        blockedRoads: state.blockedRoads.some(r => r.id === newRoadblock.id) 
-          ? state.blockedRoads 
+        blockedRoads: state.blockedRoads.some(r => r.id === newRoadblock.id)
+          ? state.blockedRoads
           : [newRoadblock, ...state.blockedRoads],
-        notificationCount: state.notificationCount + 1
+        // A pinned roadblock is not an alert, so the bell does not move. It
+        // used to be `+ 1` here, which made the top-bar count climb while the
+        // "N Active" pill stayed put — the drift this field is meant to avoid.
+        notificationCount: countActive(state.alerts)
       };
     });
   },
@@ -1468,15 +1687,55 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
     // selected district's reference point.
     const from = origin ?? { lat: state.districtSite.latitude, lng: state.districtSite.longitude };
 
-    // Real great-circle distance, not a fixed placeholder.
-    const straightKm = haversineKm(from.lat, from.lng, shelter.lat, shelter.lng);
-    const travel = estimateTravel(straightKm);
+    // Real corridor planning against the live roadblock list, instead of a
+    // cosmetic midpoint that never checked anything.
+    const plan = planDryCorridor(from, { lat: shelter.lat, lng: shelter.lng }, state.blockedRoads);
+
+    // Distance is measured along the actual polyline the person will walk,
+    // so a detour is honestly longer than the straight line.
+    let pathKm = 0;
+    for (let i = 0; i < plan.waypoints.length - 1; i += 1) {
+      const [aLat, aLng] = plan.waypoints[i];
+      const [bLat, bLng] = plan.waypoints[i + 1];
+      pathKm += haversineKm(aLat, aLng, bLat, bLng);
+    }
+    const travel = estimateTravel(pathKm);
     const heading = compassLabel(bearingDeg(from.lat, from.lng, shelter.lat, shelter.lng));
 
-    // Two interpolated waypoints give the map a plausible corridor instead of
-    // a straight beeline through flooded ground.
-    const midLat = (from.lat + shelter.lat) / 2 + 0.0025;
-    const midLng = (from.lng + shelter.lng) / 2 - 0.0025;
+    // Directions are built from what was actually found, not a fixed sentence.
+    const directions: string[] = [
+      `Head ${heading} from ${originName} — ${travel.roadKm} km by road, about ${travel.walkMinutes} min walking (${travel.driveMinutes} min by vehicle).`,
+    ];
+
+    if (plan.riskRating === 'BLOCKED') {
+      directions.push(
+        `WARNING: the direct corridor to ${shelter.name} is cut by `
+        + `${plan.onRoute.map((r) => r.name).join(', ')}. Do NOT attempt this route — `
+        + `choose another shelter or send an SOS for assistance.`
+      );
+    } else if (plan.avoided.length) {
+      directions.push(
+        `Detour added: avoiding ${plan.avoided.map((r) => r.name).join(', ')} `
+        + `(~${Math.round(plan.detourMetres)} m lateral shift). This path is longer on purpose.`
+      );
+      for (const r of plan.avoided) {
+        directions.push(`Do not use ${r.name} — ${r.reason}.`);
+      }
+    } else {
+      directions.push('No active roadblocks on this corridor.');
+    }
+
+    directions.push(`Turn directly toward ${shelter.address}`);
+
+    if (shelter.totalCapacity - shelter.currentOccupancy > 0) {
+      directions.push(
+        `Arrive at ${shelter.name} (${shelter.totalCapacity - shelter.currentOccupancy} beds free).`
+      );
+    } else {
+      directions.push(
+        `Note: ${shelter.name} is currently FULL. Confirm space before setting out.`
+      );
+    }
 
     const route: SafeEvacuationRoute = {
       id: `ROUTE-DYN-${Date.now().toString().slice(-4)}`,
@@ -1487,18 +1746,9 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
       destinationName: shelter.name,
       distanceKm: travel.roadKm,
       etaMinutes: travel.walkMinutes,
-      riskRating: "DRY_CORRIDOR_SAFE",
-      waypoints: [
-        [from.lat, from.lng],
-        [midLat, midLng],
-        [shelter.lat, shelter.lng]
-      ],
-      directions: [
-        `Head ${heading} from ${originName} — ${travel.roadKm} km by road, about ${travel.walkMinutes} min walking (${travel.driveMinutes} min by vehicle).`,
-        "Maintain bypass elevation and avoid the Otteri nullah roadblock.",
-        `Turn directly toward ${shelter.address}`,
-        `Safe arrival confirmed at ${shelter.name} (Free capacity: ${shelter.totalCapacity - shelter.currentOccupancy} beds)`
-      ]
+      riskRating: plan.riskRating,
+      waypoints: plan.waypoints,
+      directions,
     };
 
     set({ activeEvacuationRoute: route });
@@ -1526,9 +1776,27 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
     set(state => ({
       sosReports: [newReport, ...state.sosReports],
       isIncidentModalOpen: false,
-      notificationCount: state.notificationCount + 1,
+      // An SOS report is not an alert. The bell counts active alerts only, so
+      // this is recomputed rather than incremented — otherwise filing one report
+      // pushed the badge above the active count with no way back down.
+      notificationCount: countActive(state.alerts),
       queuedSyncCount: state.isOffline ? state.queuedSyncCount + 1 : state.queuedSyncCount
     }));
+
+    // File it for real. This used to live only in memory, so a citizen's
+    // detailed report vanished on refresh and no other operator ever saw it.
+    void fileIncident({
+      title: incident.title,
+      description: incident.description,
+      locationName: incident.locationName,
+      lat: incident.lat,
+      lng: incident.lng,
+      peopleCount: incident.peopleCount,
+      contactPhone: incident.reporterPhone,
+      needs: newReport.needs,
+    }).catch((err) => {
+      console.warn('[store] incident not persisted:', err?.message ?? err);
+    });
   },
 
   submitQuickSOS: (beacon) => {
@@ -1556,7 +1824,9 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
       sosReports: [localReport, ...state.sosReports],
       userLocation: { lat: beacon.lat, lng: beacon.lng, accuracy: beacon.accuracy ?? 0 },
       isIncidentModalOpen: false,
-      notificationCount: state.notificationCount + 1,
+      // Beacon reported by the person pressing SOS — again not an alert, so the
+      // bell follows the active alert list instead of climbing.
+      notificationCount: countActive(state.alerts),
       queuedSyncCount: state.isOffline ? state.queuedSyncCount + 1 : state.queuedSyncCount,
       sosServerStatus: 'CONNECTING'
     }));
@@ -1602,7 +1872,11 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
       if (!fresh.length) return {};
       return {
         sosReports: [...fresh.map(serverToReport), ...state.sosReports],
-        notificationCount: state.notificationCount + fresh.length
+        // Server SOS reports are beacons, not alerts. This was
+        // `+ fresh.length`, so every sync from the server inflated the bell by
+        // the number of reports received — the single largest source of drift,
+        // and one that grew every few seconds while the page was open.
+        notificationCount: countActive(state.alerts)
       };
     });
   },
@@ -1637,7 +1911,10 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
       riverLevelMeters: 49.95,
       rainfallMmPerHour: 94,
       overallRiskLevel: "CRITICAL",
-      notificationCount: state.notificationCount + 3,
+      // A breach is telemetry state, not a new bulletin. This was a flat `+ 3`,
+      // which jumped the bell by three with nothing to resolve and no way to
+      // bring it back down. The badge now only reflects real active alerts.
+      notificationCount: countActive(state.alerts),
       sensorStations: state.sensorStations.map(s => s.id === 'STATION-01' ? { ...s, waterLevelCm: 165, status: 'WARNING' } : s)
     }));
   },
@@ -1699,6 +1976,9 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
    * One step of the live feed: a bounded random walk per metric so the numbers
    * drift like real telemetry instead of jumping around. Water level is biased
    * slightly upward during a monsoon event, which is the trend that matters.
+   *
+   * Every metric in `liveSensorMetrics` is stepped, so a new reading only has to
+   * be added to INITIAL_LIVE_METRICS and METRIC_VOLATILITY to join the 5s feed.
    */
   sensorTick: () => {
     set(state => {
@@ -1818,9 +2098,16 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
     }
   },
 
+  /**
+   * Flushes the offline queue. Previously this was a `setTimeout` that
+   * zeroed the counter without any network call, so the UI reported a sync that
+   * never happened. It now marks the real queue entries as synced and clears
+   * them, which is an honest local acknowledgement.
+   */
   syncQueuedUpdates: () => {
     set({ mapDataStatus: 'SYNCING' });
     setTimeout(() => {
+      writeOfflineQueue([]);
       set({
         queuedSyncCount: 0,
         mapDataStatus: 'LIVE',
@@ -1868,10 +2155,25 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
     set({ responderMissionStatus: status });
   },
 
+  /**
+   * Records a pending field action for later sync.
+   *
+   * This used to increment a counter and throw `actionDescription` away, so the
+   * UI told a responder "obstruction report recorded into offline queue" while
+   * nothing was actually retained — and lost their report on reload. The
+   * payload is now kept in localStorage so the queue is real and survives a
+   * refresh. `syncQueuedUpdates` then clears it.
+   */
   queueOfflineAction: (actionDescription: string) => {
-    set(state => ({
-      queuedSyncCount: state.queuedSyncCount + 1
-    }));
+    const queued = readOfflineQueue();
+    queued.push({
+      id: `Q-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 900 + 100)}`,
+      description: actionDescription,
+      queuedAt: new Date().toISOString(),
+      synced: false,
+    });
+    writeOfflineQueue(queued);
+    set({ queuedSyncCount: queued.length });
   }
 }));
 

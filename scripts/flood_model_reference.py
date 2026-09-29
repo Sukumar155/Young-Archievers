@@ -13,10 +13,9 @@ import sys
 import numpy as np
 import xgboost as xgb
 
-MODEL = os.environ.get(
-    "FLOOD_MODEL",
-    r"C:\Users\ADMIN\Videos\nexora_flood_risk_model_xgboost.json",
-)
+# Default to the in-repo model so a clean clone works. Previously this pointed
+# at a hardcoded C:\Users\ADMIN\... path from another machine.
+MODEL = os.environ.get("FLOOD_MODEL", "public/models/flood_risk_xgboost.json")
 
 FEATURES = [
     "Temperature_C",

@@ -1087,7 +1087,7 @@ export const NexoraChatbot: React.FC = () => {
 
       {/* EXPANDED CHAT PANEL */}
       {isOpen && (
-        <div className="w-[calc(100vw-32px)] sm:w-[420px] h-[80vh] sm:h-[550px] max-h-[90vh] sm:max-h-[85vh] bg-white dark:bg-[#17181C] text-[#14151A] dark:text-[#F1F1EF] rounded-xl shadow-[0_24px_48px_-12px_rgba(20,21,26,0.18),0_8px_16px_-8px_rgba(20,21,26,0.08)] border border-[#E4E4E0] dark:border-[#2E3038] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
+        <div className="w-[calc(100vw-32px)] sm:w-[420px] h-[80vh] sm:h-[550px] max-h-[90vh] sm:max-h-[85vh] bg-white dark:bg-[#212121] text-[#14151A] dark:text-[#FFFFFF] rounded-xl shadow-[0_24px_48px_-12px_rgba(20,21,26,0.18),0_8px_16px_-8px_rgba(20,21,26,0.08)] border border-[#E4E4E0] dark:border-[#B4B4B4] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
           
           {/* HEADER */}
           <div className="px-4 h-12 bg-[#1A3A6B] text-white flex items-center justify-between border-b border-[#12294D]">
@@ -1137,7 +1137,7 @@ export const NexoraChatbot: React.FC = () => {
               {/* Clear conversation button */}
               <button
                 onClick={handleClearChat}
-                className="p-1.5 rounded-lg text-[#6B6D77] hover:text-white hover:bg-[#12294D] transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-[#6B6D77] hover:text-white hover:bg-[#12294D] transition-colors cursor-pointer dark:text-[#D0D0D0]"
                 title={t('chat_clear', 'Clear conversation')}
                 aria-label={t('chat_clear', 'Clear conversation')}
               >
@@ -1149,7 +1149,7 @@ export const NexoraChatbot: React.FC = () => {
                   stopSpeaking();
                   setIsOpen(false);
                 }}
-                className="p-1 rounded-lg text-[#6B6D77] hover:text-white hover:bg-[#12294D] transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-[#6B6D77] hover:text-white hover:bg-[#12294D] transition-colors cursor-pointer dark:text-[#D0D0D0]"
                 title="Close Assistant"
               >
                 <X className="w-4 h-4" />
@@ -1208,7 +1208,7 @@ export const NexoraChatbot: React.FC = () => {
                   <span>{t('voice_try_again', 'Try Again')}</span>
                 </button>
               )}
-              <span className="text-[#6B6D77] text-[9px] font-mono">
+              <span className="text-[#6B6D77] text-[9px] font-mono dark:text-[#D0D0D0]">
                 {LANGUAGE_CONFIG[currentLanguage]?.speechRecognition || SPEECH_LOCALES[currentLanguage] || 'en-IN'}
               </span>
             </div>
@@ -1216,9 +1216,9 @@ export const NexoraChatbot: React.FC = () => {
 
           {/* VOICE SYSTEM NOTICE / FALLBACK BANNER */}
           {voiceNotice && (
-            <div data-voice-notice className="px-3.5 py-2 bg-[#FBF7EC] dark:bg-[#1C1D22] border-b border-[#F5E0A0] dark:border-[#2E3038] text-[11px] text-[#7A3E0B] dark:text-[#F1F1EF] flex items-start justify-between gap-2 animate-fade-in">
+            <div data-voice-notice className="px-3.5 py-2 bg-[#FBF7EC] dark:bg-[#2F2F2F] border-b border-[#F5E0A0] dark:border-[#B4B4B4] text-[11px] text-[#7A3E0B] dark:text-[#FFFFFF] flex items-start justify-between gap-2 animate-fade-in">
               <div className="flex items-start gap-1.5 leading-snug">
-                <AlertTriangle className="w-3.5 h-3.5 text-[#A15C07] flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="w-3.5 h-3.5 text-[#A15C07] flex-shrink-0 mt-0.5 dark:text-[#E0E0E0]" />
                 <span>{voiceNotice.message}</span>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
@@ -1226,7 +1226,7 @@ export const NexoraChatbot: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleRetryVoices}
-                    className="px-2 py-0.5 rounded bg-[#1A3A6B] dark:bg-[#2C5C93] hover:bg-[#12294D] dark:hover:bg-[#1A3A6B] text-white text-[9px] font-bold cursor-pointer flex items-center gap-1"
+                    className="px-2 py-0.5 rounded bg-[#1A3A6B] dark:bg-[#60A5FA] hover:bg-[#12294D] dark:hover:bg-[#1A3A6B] text-white text-[9px] font-bold cursor-pointer flex items-center gap-1"
                   >
                     <RefreshCw className="w-2.5 h-2.5" />
                     <span>{t('voice_retry_speech', 'Retry')}</span>
@@ -1235,7 +1235,7 @@ export const NexoraChatbot: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setVoiceNotice(null)}
-                  className="text-[#7A3E0B] dark:text-[#A1A3AC] hover:text-[#6B360C] dark:hover:text-white font-bold text-xs cursor-pointer p-0.5"
+                  className="text-[#7A3E0B] dark:text-[#D0D0D0] hover:text-[#6B360C] dark:hover:text-white font-bold text-xs cursor-pointer p-0.5"
                   title="Dismiss"
                 >
                   ✕
@@ -1246,9 +1246,9 @@ export const NexoraChatbot: React.FC = () => {
 
           {/* AI FALLBACK NOTICE (only when the live AI is unreachable) */}
           {aiNotice && (
-            <div data-ai-notice className="px-3.5 py-2 bg-[#FBF7EC] dark:bg-[#1C1D22] border-b border-[#F5E0A0] dark:border-[#2E3038] text-[11px] text-[#7A3E0B] dark:text-[#F1F1EF] flex items-start justify-between gap-2 animate-fade-in">
+            <div data-ai-notice className="px-3.5 py-2 bg-[#FBF7EC] dark:bg-[#2F2F2F] border-b border-[#F5E0A0] dark:border-[#B4B4B4] text-[11px] text-[#7A3E0B] dark:text-[#FFFFFF] flex items-start justify-between gap-2 animate-fade-in">
               <div className="flex items-start gap-1.5 leading-snug">
-                <AlertTriangle className="w-3.5 h-3.5 text-[#A15C07] flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="w-3.5 h-3.5 text-[#A15C07] flex-shrink-0 mt-0.5 dark:text-[#E0E0E0]" />
                 <span>{aiNotice}</span>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
@@ -1256,7 +1256,7 @@ export const NexoraChatbot: React.FC = () => {
                   <button
                     type="button"
                     onClick={retryAi}
-                    className="px-2 py-0.5 rounded bg-[#1A3A6B] dark:bg-[#2C5C93] hover:bg-[#12294D] dark:hover:bg-[#1A3A6B] text-white text-[9px] font-bold cursor-pointer flex items-center gap-1"
+                    className="px-2 py-0.5 rounded bg-[#1A3A6B] dark:bg-[#60A5FA] hover:bg-[#12294D] dark:hover:bg-[#1A3A6B] text-white text-[9px] font-bold cursor-pointer flex items-center gap-1"
                     title="Reconnect to the AI service"
                   >
                     <RefreshCw className="w-2.5 h-2.5" />
@@ -1264,14 +1264,14 @@ export const NexoraChatbot: React.FC = () => {
                   </button>
                 )}
                 {isForcedOffline && (
-                  <span className="px-2 py-0.5 rounded bg-[#F0A79E]/25 text-[#7A3E0B] dark:text-[#F1F1EF] text-[9px] font-bold font-data whitespace-nowrap">
+                  <span className="px-2 py-0.5 rounded bg-[#F0A79E]/25 text-[#7A3E0B] dark:text-[#FFFFFF] text-[9px] font-bold font-data whitespace-nowrap">
                     Network: OFFLINE
                   </span>
                 )}
                 <button
                   type="button"
                   onClick={() => setAiNotice(null)}
-                  className="text-[#7A3E0B] dark:text-[#A1A3AC] hover:text-[#6B360C] dark:hover:text-white font-bold text-xs cursor-pointer p-0.5"
+                  className="text-[#7A3E0B] dark:text-[#D0D0D0] hover:text-[#6B360C] dark:hover:text-white font-bold text-xs cursor-pointer p-0.5"
                   title="Dismiss"
                   aria-label="Dismiss"
                 >
@@ -1282,7 +1282,7 @@ export const NexoraChatbot: React.FC = () => {
           )}
 
           {/* MESSAGES BODY */}
-          <div className="flex-1 p-3.5 overflow-y-auto space-y-3 text-xs bg-[#F1F1EF] dark:bg-[#101116]">
+          <div className="flex-1 p-3.5 overflow-y-auto space-y-3 text-xs bg-[#F1F1EF] dark:bg-[#171717]">
             {messages.map((m) => (
               <div
                 key={m.id}
@@ -1291,18 +1291,18 @@ export const NexoraChatbot: React.FC = () => {
                 <div
                   className={`p-3 rounded-xl max-w-[88%] leading-relaxed whitespace-pre-line shadow-xs ${
                     m.sender === 'user'
-                      ? 'bg-[#1A3A6B] dark:bg-[#2C5C93] text-white font-medium border border-[#1A3A6B] dark:border-[#2C5C93]/40'
-                      : 'bg-white dark:bg-[#1C1D22] text-[#14151A] dark:text-[#F1F1EF] border border-[#D5D6DA] dark:border-[#2E3038]'
+                      ? 'bg-[#1A3A6B] dark:bg-[#60A5FA] text-white font-medium border border-[#1A3A6B] dark:border-[#60A5FA]/40'
+                      : 'bg-white dark:bg-[#2F2F2F] text-[#14151A] dark:text-[#FFFFFF] border border-[#D5D6DA] dark:border-[#B4B4B4]'
                   }`}
                 >
                   <div>{m.text}</div>
                   
                   {/* INTERACTIVE LOCATION ACTION BUTTONS */}
                   {m.sender === 'bot' && m.locationAction && (
-                    <div className="mt-2.5 pt-2 border-t border-[#DEDEDA] dark:border-[#2E3038] flex flex-wrap items-center gap-2">
+                    <div className="mt-2.5 pt-2 border-t border-[#DEDEDA] dark:border-[#B4B4B4] flex flex-wrap items-center gap-2">
                       <button
                         onClick={() => handleOpenInMap(m.locationAction)}
-                        className="px-2.5 py-1.5 rounded-lg bg-[#1A3A6B] hover:bg-[#12294D] dark:bg-[#14251F] hover:dark:bg-[#26272E] text-white text-[11px] font-medium flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer border border-[#1A3A6B] dark:border-[#2E3038]"
+                        className="px-2.5 py-1.5 rounded-lg bg-[#1A3A6B] hover:bg-[#12294D] dark:bg-[#0A2E22] hover:dark:bg-[#3D3D3D] text-white text-[11px] font-medium flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer border border-[#1A3A6B] dark:border-[#B4B4B4]"
                         title="Open on Disaster Map"
                         data-action="open-in-maps"
                       >
@@ -1334,12 +1334,12 @@ export const NexoraChatbot: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5 px-1 text-[9px] text-[#6B6D77] dark:text-[#74767F] font-data">
+                <div className="flex items-center gap-2 mt-0.5 px-1 text-[9px] text-[#6B6D77] dark:text-[#E0E0E0] font-data">
                   <span>{m.timestamp}</span>
                   {m.sender === 'bot' && (
                     <button
                       onClick={() => speakText(m.text)}
-                      className="text-[#1A3A6B] dark:text-[#9DB8DC] hover:opacity-80 cursor-pointer"
+                      className="text-[#1A3A6B] dark:text-[#D0D0D0] hover:opacity-80 cursor-pointer"
                       title="Read aloud"
                     >
                       <Volume2 className="w-3 h-3" />
@@ -1352,7 +1352,7 @@ export const NexoraChatbot: React.FC = () => {
             {/* LIVE STREAMING / TYPING INDICATOR (mini-ChatGPT) */}
             {isStreaming && (
               <div className="flex flex-col items-start">
-                <div className="p-3 rounded-xl max-w-[88%] leading-relaxed whitespace-pre-line shadow-xs bg-white dark:bg-[#1C1D22] text-[#14151A] dark:text-[#F1F1EF] border border-[#D5D6DA] dark:border-[#2E3038]">
+                <div className="p-3 rounded-xl max-w-[88%] leading-relaxed whitespace-pre-line shadow-xs bg-white dark:bg-[#2F2F2F] text-[#14151A] dark:text-[#FFFFFF] border border-[#D5D6DA] dark:border-[#B4B4B4]">
                   {streamingText ? (
                     <span>
                       {streamingText}
@@ -1373,12 +1373,12 @@ export const NexoraChatbot: React.FC = () => {
           </div>
 
           {/* SUGGESTED PROMPTS STRIP */}
-          <div className="px-3 py-2 bg-white dark:bg-[#17181C] border-t border-[#DEDEDA] dark:border-[#2E3038] flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+          <div className="px-3 py-2 bg-white dark:bg-[#212121] border-t border-[#DEDEDA] dark:border-[#B4B4B4] flex items-center gap-1.5 overflow-x-auto scrollbar-none">
             {sampleQuestions.slice(0, 3).map((sq, idx) => (
               <button
                 key={idx}
                 onClick={() => handleAsk(sq)}
-                className="px-2.5 py-1 rounded-lg bg-[#F1F1EF] dark:bg-[#1C1D22] hover:bg-[#EEF2F8] hover:dark:bg-[#282931] text-[#14151A] dark:text-[#F1F1EF] hover:text-[#1A3A6B] dark:hover:text-[#9DB8DC] border border-[#D5D6DA] dark:border-[#2E3038] text-[10px] font-medium whitespace-nowrap transition-all cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-[#F1F1EF] dark:bg-[#2F2F2F] hover:bg-[#EEF2F8] hover:dark:bg-[#3D3D3D] text-[#14151A] dark:text-[#FFFFFF] hover:text-[#1A3A6B] dark:hover:text-[#9DB8DC] border border-[#D5D6DA] dark:border-[#B4B4B4] text-[10px] font-medium whitespace-nowrap transition-all cursor-pointer"
               >
                 {sq}
               </button>
@@ -1395,7 +1395,7 @@ export const NexoraChatbot: React.FC = () => {
                 handleAsk(val);
               }
             }}
-            className="p-2.5 bg-white dark:bg-[#17181C] border-t border-[#DEDEDA] dark:border-[#2E3038] flex items-center gap-2"
+            className="p-2.5 bg-white dark:bg-[#212121] border-t border-[#DEDEDA] dark:border-[#B4B4B4] flex items-center gap-2"
           >
             {/* MICROPHONE BUTTON (Speech-to-Text) */}
             <button
@@ -1407,10 +1407,10 @@ export const NexoraChatbot: React.FC = () => {
                 voiceState === 'LISTENING'
                   ? 'bg-[#1A3A6B] text-[#14151A] border-[#1A3A6B] shadow-md animate-pulse ring-2 ring-[#1A3A6B]/50'
                   : voiceState === 'ERROR'
-                  ? 'bg-[#FAF0D8] dark:bg-[#1C1D22] text-[#B42318] border-[#E0776C]'
+                  ? 'bg-[#FAF0D8] dark:bg-[#2F2F2F] text-[#B42318] border-[#E0776C]'
                   : voiceState === 'SPEAKING'
-                  ? 'bg-[#E4F3E9] dark:bg-[#1C1D22] text-[#126B34] border-[#7CC99A]'
-                  : 'bg-[#F1F1EF] dark:bg-[#1C1D22] text-[#1A3A6B] dark:text-[#9DB8DC] hover:bg-[#EEF2F8] hover:dark:bg-[#282931] border-[#D5D6DA] dark:border-[#2E3038]'
+                  ? 'bg-[#E4F3E9] dark:bg-[#2F2F2F] text-[#126B34] border-[#7CC99A]'
+                  : 'bg-[#F1F1EF] dark:bg-[#2F2F2F] text-[#1A3A6B] dark:text-[#D0D0D0] hover:bg-[#EEF2F8] hover:dark:bg-[#3D3D3D] border-[#D5D6DA] dark:border-[#B4B4B4]'
               }`}
               title={
                 voiceState === 'LISTENING'
@@ -1428,13 +1428,13 @@ export const NexoraChatbot: React.FC = () => {
               }
             >
               {voiceState === 'LISTENING' ? (
-                <Mic className="w-5 h-5 text-[#14151A]" />
+                <Mic className="w-5 h-5 text-[#14151A] dark:text-[#FFFFFF]" />
               ) : voiceState === 'ERROR' ? (
-                <MicOff className="w-5 h-5 text-[#B42318]" />
+                <MicOff className="w-5 h-5 text-[#B42318] dark:text-[#FFFFFF]" />
               ) : voiceState === 'SPEAKING' ? (
-                <Volume2 className="w-5 h-5 text-[#126B34] animate-pulse" />
+                <Volume2 className="w-5 h-5 text-[#126B34] animate-pulse dark:text-[#D0D0D0]" />
               ) : (
-                <Mic className="w-5 h-5 text-[#1A3A6B] dark:text-[#9DB8DC]" />
+                <Mic className="w-5 h-5 text-[#1A3A6B] dark:text-[#D0D0D0]" />
               )}
             </button>
 
@@ -1447,7 +1447,7 @@ export const NexoraChatbot: React.FC = () => {
                   ? t('voice_status_listening', 'Listening to voice... Speak now')
                   : t('chat_placeholder', 'Ask me anything…')
               }
-              className="flex-1 px-3 py-2 bg-[#F1F1EF] dark:bg-[#0D0E12] border border-[#D5D6DA] dark:border-[#2E3038] rounded-xl text-xs text-[#14151A] dark:text-[#F1F1EF] placeholder-[#6B6D77] dark:placeholder-[#74767F] focus:bg-white focus:dark:bg-[#0D0E12] focus:outline-none focus:ring-2 focus:ring-[#1A3A6B]/40"
+              className="flex-1 px-3 py-2 bg-[#F1F1EF] dark:bg-[#171717] border border-[#D5D6DA] dark:border-[#B4B4B4] rounded-xl text-xs text-[#14151A] dark:text-[#FFFFFF] placeholder-[#6B6D77] dark:placeholder-[#E0E0E0] focus:bg-white focus:dark:bg-[#171717] focus:outline-none focus:ring-2 focus:ring-[#1A3A6B]/40"
             />
 
             {isStreaming ? (
@@ -1464,7 +1464,7 @@ export const NexoraChatbot: React.FC = () => {
               <button
                 type="submit"
                 disabled={!input.trim()}
-                className="p-2 rounded-xl bg-[#1A3A6B] dark:bg-[#2C5C93] hover:bg-[#12294D] dark:hover:bg-[#1A3A6B] text-white disabled:opacity-40 transition-colors cursor-pointer flex-shrink-0 border border-[#1A3A6B] dark:border-[#2C5C93]/40"
+                className="p-2 rounded-xl bg-[#1A3A6B] dark:bg-[#60A5FA] hover:bg-[#12294D] dark:hover:bg-[#1A3A6B] text-white disabled:opacity-40 transition-colors cursor-pointer flex-shrink-0 border border-[#1A3A6B] dark:border-[#60A5FA]/40"
                 title={t('chat_send', 'Send')}
               >
                 <Send className="w-4 h-4" />

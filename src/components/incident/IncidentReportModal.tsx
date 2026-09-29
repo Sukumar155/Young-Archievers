@@ -46,22 +46,22 @@ export const IncidentReportModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#17181C]/60 backdrop-blur-xs animate-fade-in font-body">
-      <div className="bg-white dark:bg-[#17181C] rounded-xl shadow-xl max-w-lg w-full overflow-hidden border border-[#E4E4E0] dark:border-[#2E3038] text-[#14151A] dark:text-[#F1F1EF]">
+      <div className="bg-white dark:bg-[#212121] rounded-xl shadow-xl max-w-lg w-full overflow-hidden border border-[#E4E4E0] dark:border-[#B4B4B4] text-[#14151A] dark:text-[#FFFFFF]">
         
         {/* Modal Header */}
-        <div className="bg-[#EFEFEC] dark:bg-[#1C1D22] px-6 py-4 border-b border-[#DCDCD8] dark:border-[#2E3038] flex items-center justify-between text-[#14151A] dark:text-[#F1F1EF]">
+        <div className="bg-[#EFEFEC] dark:bg-[#2F2F2F] px-6 py-4 border-b border-[#DCDCD8] dark:border-[#B4B4B4] flex items-center justify-between text-[#14151A] dark:text-[#FFFFFF]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#FCF1F0] dark:bg-[#2A1614]/50 border border-[#F3CFC9] dark:border-[#4A2622]/60 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-[#B42318] dark:text-[#E0776C]" />
+            <div className="w-8 h-8 rounded-lg bg-[#FCF1F0] dark:bg-[#3F1414]/50 border border-[#F3CFC9] dark:border-[#7F1D1D]/60 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-[#B42318] dark:text-[#C0C0C0]" />
             </div>
             <div>
-              <h2 className="font-heading font-bold text-base leading-tight text-[#14151A] dark:text-[#F1F1EF]">{t('report_modal_title', 'Report Disaster Incident')}</h2>
-              <p className="text-xs text-[#5A5C66] dark:text-[#A1A3AC]">Live Sync with SEOC Incident Command System</p>
+              <h2 className="font-heading font-bold text-base leading-tight text-[#14151A] dark:text-[#FFFFFF]">{t('report_modal_title', 'Report Disaster Incident')}</h2>
+              <p className="text-xs text-[#5A5C66] dark:text-[#D0D0D0]">Live Sync with SEOC Incident Command System</p>
             </div>
           </div>
           <button
             onClick={() => toggleIncidentModal(false)}
-            className="p-1 rounded-lg hover:bg-[#F1F1EF] dark:hover:bg-[#2E3038] text-[#5A5C66] dark:text-[#A1A3AC] hover:text-[#14151A] dark:hover:text-[#F1F1EF] transition-colors cursor-pointer"
+            className="p-1 rounded-lg hover:bg-[#F1F1EF] dark:hover:bg-[#2E3038] text-[#5A5C66] dark:text-[#D0D0D0] hover:text-[#14151A] dark:hover:text-[#F1F1EF] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -69,15 +69,15 @@ export const IncidentReportModal: React.FC = () => {
 
         {submitted ? (
           <div className="p-8 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-[#F0F7F4] dark:bg-[#14251F]/40 text-[#2A6B4A] dark:text-[#5BBF7A] border border-[#CFE6D8] dark:border-[#234133]/60 mx-auto flex items-center justify-center shadow-inner">
+            <div className="w-16 h-16 rounded-full bg-[#F0F7F4] dark:bg-[#0A2E22]/40 text-[#2A6B4A] dark:text-[#D0D0D0] border border-[#CFE6D8] dark:border-[#14532D]/60 mx-auto flex items-center justify-center shadow-inner">
               <CheckCircle2 className="w-10 h-10 nx-pop" />
             </div>
-            <h3 className="text-lg font-bold text-[#14151A] dark:text-[#F1F1EF]">Incident Dispatched & Verified!</h3>
-            <p className="text-sm text-[#5A5C66] dark:text-[#A1A3AC] max-w-sm mx-auto">
-              Your report has been geotagged, assigned an AI triage score of <strong className="text-[#2A6B4A] dark:text-[#5BBF7A]">84/100</strong>, and pinned to the live rescue grid for immediate response.
+            <h3 className="text-lg font-bold text-[#14151A] dark:text-[#FFFFFF]">Incident Dispatched & Verified!</h3>
+            <p className="text-sm text-[#5A5C66] dark:text-[#D0D0D0] max-w-sm mx-auto">
+              Your report has been geotagged, assigned an AI triage score of <strong className="text-[#2A6B4A] dark:text-[#D0D0D0]">84/100</strong>, and pinned to the live rescue grid for immediate response.
             </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F0F7F4] dark:bg-[#14251F]/40 border border-[#CFE6D8] dark:border-[#234133]/60 text-xs font-semibold text-[#2A6B4A] dark:text-[#5BBF7A]">
-              <ShieldCheck className="w-4 h-4 text-[#126B34] dark:text-[#5BBF7A]" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F0F7F4] dark:bg-[#0A2E22]/40 border border-[#CFE6D8] dark:border-[#14532D]/60 text-xs font-semibold text-[#2A6B4A] dark:text-[#D0D0D0]">
+              <ShieldCheck className="w-4 h-4 text-[#126B34] dark:text-[#D0D0D0]" />
               <span>Broadcast to NDRF & SDRF Units</span>
             </div>
           </div>
@@ -86,7 +86,7 @@ export const IncidentReportModal: React.FC = () => {
             
             {/* Category selection */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#5A5C66] dark:text-[#A1A3AC] mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#5A5C66] dark:text-[#D0D0D0] mb-2">
                 {t('report_category', 'Incident Category')}
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -98,7 +98,7 @@ export const IncidentReportModal: React.FC = () => {
                     className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all cursor-pointer ${
                       category === c.id
                         ? 'btn-primary-gradient text-white border-[#14151A] shadow-2xs'
-                        : 'border-[#E4E4E0] dark:border-[#2E3038] bg-[#F8F8F7] dark:bg-[#0D0E12] text-[#14151A] dark:text-[#F1F1EF] hover:bg-[#EFEFEC] dark:hover:bg-[#1C1D22]'
+                        : 'border-[#E4E4E0] dark:border-[#B4B4B4] bg-[#F8F8F7] dark:bg-[#171717] text-[#14151A] dark:text-[#FFFFFF] hover:bg-[#EFEFEC] dark:hover:bg-[#1C1D22]'
                     }`}
                   >
                     <span>{c.icon}</span>
@@ -110,43 +110,43 @@ export const IncidentReportModal: React.FC = () => {
 
             {/* Photo Attachment simulation */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#5A5C66] dark:text-[#A1A3AC] mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#5A5C66] dark:text-[#D0D0D0] mb-1.5">
                 Attach Photo / Drone Footage (Optional)
               </label>
-              <div className="border-2 border-dashed border-[#E4E4E0] dark:border-[#2E3038] rounded-xl p-3 text-center bg-[#F8F8F7] dark:bg-[#0D0E12] hover:bg-[#EFEFEC] dark:hover:bg-[#1C1D22] hover:border-[#DCDCD8] dark:hover:border-[#5B7BA8]/40 transition-all cursor-pointer">
-                <div className="flex items-center justify-center gap-2 text-[#5A5C66] dark:text-[#A1A3AC] text-xs">
-                  <Camera className="w-4 h-4 text-[#12294D] dark:text-[#9DB8DC]" />
+              <div className="border-2 border-dashed border-[#E4E4E0] dark:border-[#B4B4B4] rounded-xl p-3 text-center bg-[#F8F8F7] dark:bg-[#171717] hover:bg-[#EFEFEC] dark:hover:bg-[#1C1D22] hover:border-[#DCDCD8] dark:hover:border-[#5B7BA8]/40 transition-all cursor-pointer">
+                <div className="flex items-center justify-center gap-2 text-[#5A5C66] dark:text-[#D0D0D0] text-xs">
+                  <Camera className="w-4 h-4 text-[#12294D] dark:text-[#D0D0D0]" />
                   <span>Click to capture or upload disaster image</span>
                 </div>
-                <div className="text-[10px] text-[#5A5C66] dark:text-[#74767F] mt-1">Supports GPS Geotagged JPEG, PNG (Auto YOLO-analyzed)</div>
+                <div className="text-[10px] text-[#5A5C66] dark:text-[#E0E0E0] mt-1">Supports GPS Geotagged JPEG, PNG (Auto YOLO-analyzed)</div>
               </div>
             </div>
 
             {/* Location & Trapped Count */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-[#14151A] dark:text-[#A1A3AC] mb-1">
+                <label className="block text-xs font-bold text-[#14151A] dark:text-[#D0D0D0] mb-1">
                   {t('report_location', 'Incident Location')}
                 </label>
                 <div className="relative">
-                  <MapPin className="w-4 h-4 text-[#B42318] dark:text-[#E0776C] absolute left-3 top-2.5 pointer-events-none" />
+                  <MapPin className="w-4 h-4 text-[#B42318] dark:text-[#C0C0C0] absolute left-3 top-2.5 pointer-events-none" />
                   <input
                     type="text"
                     required
                     value={locationName}
                     onChange={(e) => setLocationName(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-[#F8F8F7] dark:bg-[#0D0E12] border border-[#E4E4E0] dark:border-[#2E3038] rounded-xl text-xs text-[#14151A] dark:text-[#F1F1EF] focus:bg-white dark:focus:bg-[#17181C] focus:outline-none focus:ring-2 focus:ring-[#12294D]/20"
+                    className="w-full pl-9 pr-3 py-2 bg-[#F8F8F7] dark:bg-[#171717] border border-[#E4E4E0] dark:border-[#B4B4B4] rounded-xl text-xs text-[#14151A] dark:text-[#FFFFFF] focus:bg-white dark:focus:bg-[#17181C] focus:outline-none focus:ring-2 focus:ring-[#12294D]/20"
                     placeholder="Area, Street, Landmark"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#14151A] dark:text-[#A1A3AC] mb-1">
+                <label className="block text-xs font-bold text-[#14151A] dark:text-[#D0D0D0] mb-1">
                   {t('report_people_trapped', 'People Trapped / At Risk')}
                 </label>
                 <div className="relative">
-                  <Users className="w-4 h-4 text-[#12294D] dark:text-[#9DB8DC] absolute left-3 top-2.5 pointer-events-none" />
+                  <Users className="w-4 h-4 text-[#12294D] dark:text-[#D0D0D0] absolute left-3 top-2.5 pointer-events-none" />
                   <input
                     type="number"
                     min="1"
@@ -154,7 +154,7 @@ export const IncidentReportModal: React.FC = () => {
                     required
                     value={peopleCount}
                     onChange={(e) => setPeopleCount(parseInt(e.target.value) || 1)}
-                    className="w-full pl-9 pr-3 py-2 bg-[#F8F8F7] dark:bg-[#0D0E12] border border-[#E4E4E0] dark:border-[#2E3038] rounded-xl text-xs text-[#14151A] dark:text-[#F1F1EF] focus:bg-white dark:focus:bg-[#17181C] focus:outline-none focus:ring-2 focus:ring-[#12294D]/20"
+                    className="w-full pl-9 pr-3 py-2 bg-[#F8F8F7] dark:bg-[#171717] border border-[#E4E4E0] dark:border-[#B4B4B4] rounded-xl text-xs text-[#14151A] dark:text-[#FFFFFF] focus:bg-white dark:focus:bg-[#17181C] focus:outline-none focus:ring-2 focus:ring-[#12294D]/20"
                   />
                 </div>
               </div>
@@ -162,7 +162,7 @@ export const IncidentReportModal: React.FC = () => {
 
             {/* Description */}
             <div>
-              <label className="block text-xs font-bold text-[#14151A] dark:text-[#A1A3AC] mb-1">
+              <label className="block text-xs font-bold text-[#14151A] dark:text-[#D0D0D0] mb-1">
                 {t('report_desc', 'Emergency Situation Description')}
               </label>
               <textarea
@@ -170,14 +170,14 @@ export const IncidentReportModal: React.FC = () => {
                 required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F8F8F7] dark:bg-[#0D0E12] border border-[#E4E4E0] dark:border-[#2E3038] rounded-xl text-xs text-[#14151A] dark:text-[#F1F1EF] focus:bg-white dark:focus:bg-[#17181C] focus:outline-none focus:ring-2 focus:ring-[#12294D]/20"
+                className="w-full px-3 py-2 bg-[#F8F8F7] dark:bg-[#171717] border border-[#E4E4E0] dark:border-[#B4B4B4] rounded-xl text-xs text-[#14151A] dark:text-[#FFFFFF] focus:bg-white dark:focus:bg-[#17181C] focus:outline-none focus:ring-2 focus:ring-[#12294D]/20"
                 placeholder="Detail the urgent needs (elderly, infants, medicines, water level rising...)"
               />
             </div>
 
             {/* Reporter Contact */}
             <div>
-              <label className="block text-xs font-bold text-[#14151A] dark:text-[#A1A3AC] mb-1">
+              <label className="block text-xs font-bold text-[#14151A] dark:text-[#D0D0D0] mb-1">
                 {t('report_phone', 'Reporter Phone Number')}
               </label>
               <input
@@ -185,16 +185,16 @@ export const IncidentReportModal: React.FC = () => {
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F8F8F7] dark:bg-[#0D0E12] border border-[#E4E4E0] dark:border-[#2E3038] rounded-xl text-xs text-[#14151A] dark:text-[#F1F1EF] focus:bg-white dark:focus:bg-[#17181C] focus:outline-none focus:ring-2 focus:ring-[#12294D]/20"
+                className="w-full px-3 py-2 bg-[#F8F8F7] dark:bg-[#171717] border border-[#E4E4E0] dark:border-[#B4B4B4] rounded-xl text-xs text-[#14151A] dark:text-[#FFFFFF] focus:bg-white dark:focus:bg-[#17181C] focus:outline-none focus:ring-2 focus:ring-[#12294D]/20"
               />
             </div>
 
             {/* Action Buttons */}
-            <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#E4E4E0] dark:border-[#2E3038]">
+            <div className="pt-2 flex items-center justify-end gap-3 border-t border-[#E4E4E0] dark:border-[#B4B4B4]">
               <button
                 type="button"
                 onClick={() => toggleIncidentModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#5A5C66] dark:text-[#A1A3AC] hover:bg-[#F1F1EF] dark:hover:bg-[#2E3038] transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#5A5C66] dark:text-[#D0D0D0] hover:bg-[#F1F1EF] dark:hover:bg-[#2E3038] transition-colors cursor-pointer"
               >
                 {t('report_cancel_btn', 'Cancel')}
               </button>

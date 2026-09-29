@@ -1,0 +1,24 @@
+{
+  "officers": [
+    {
+      "phone": "9000000002",
+      "name": "Demo DDMO Officer",
+      "role": "DDMO_OFFICER"
+    },
+    {
+      "phone": "9000000003",
+      "name": "Demo Field Responder",
+      "role": "FIELD_RESPONDER"
+    },
+    {
+      "phone": "9000000004",
+      "name": "Demo Shelter Manager",
+      "role": "SHELTER_MANAGER"
+    },
+    {
+      "phone": "7904678280",
+      "name": "Field Tester",
+      "role": "DDMO_OFFICER"
+    }
+  ]
+}

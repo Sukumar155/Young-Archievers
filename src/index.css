@@ -3,6 +3,12 @@
 @import "./design-system/typography.css";
 @import "./design-system/globals.css";
 
+/* Tailwind v4 ships `dark:` bound to `prefers-color-scheme`, so the in-app
+   theme toggle did nothing for the ~1000 `dark:` utilities in the codebase —
+   they followed the OS setting, not the button. Rebinding the variant to the
+   `.dark` class that App.tsx toggles on <html> makes the switch work. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Custom utility bindings if needed */
 @layer utilities {
   .text-deep-river {

@@ -28,13 +28,13 @@ const GROUP_ICON: Record<WeatherCodeInfo['group'], React.ComponentType<{ classNa
 };
 
 const GROUP_TINT: Record<WeatherCodeInfo['group'], string> = {
-  clear: 'text-[#A15C07] dark:text-[#D9A03A]',
-  cloudy: 'text-[#5A5C66] dark:text-[#A1A3AC]',
-  fog: 'text-[#5A5C66] dark:text-[#A1A3AC]',
-  drizzle: 'text-[#2C5C93] dark:text-[#9DB8DC]',
-  rain: 'text-[#1A3A6B] dark:text-[#9DB8DC]',
-  snow: 'text-[#2C5C93] dark:text-[#9DB8DC]',
-  thunder: 'text-[#A15C07] dark:text-[#D9A03A]'
+  clear: 'text-[#A15C07] dark:text-[#D0D0D0]',
+  cloudy: 'text-[#5A5C66] dark:text-[#D0D0D0]',
+  fog: 'text-[#5A5C66] dark:text-[#D0D0D0]',
+  drizzle: 'text-[#2C5C93] dark:text-[#D0D0D0]',
+  rain: 'text-[#1A3A6B] dark:text-[#D0D0D0]',
+  snow: 'text-[#2C5C93] dark:text-[#D0D0D0]',
+  thunder: 'text-[#A15C07] dark:text-[#D0D0D0]'
 };
 
 const relativeAge = (ts: number) => {
@@ -66,10 +66,10 @@ export const WeatherStrip: React.FC<WeatherStripProps> = ({ className = '' }) =>
     return (
       <div
         data-testid="weather-strip"
-        className={`bg-white dark:bg-[#17181C] border border-[#DEDEDA] dark:border-[#2E3038] rounded-xl shadow-xs px-4 py-3 flex items-center gap-3 ${className}`}
+        className={`bg-white dark:bg-[#212121] border border-[#DEDEDA] dark:border-[#B4B4B4] rounded-xl shadow-xs px-4 py-3 flex items-center gap-3 ${className}`}
       >
-        <CloudOff className="w-4 h-4 text-[#6B6D77] dark:text-[#A1A3AC] flex-shrink-0" />
-        <span className="text-xs text-[#6B6D77] dark:text-[#A1A3AC]">
+        <CloudOff className="w-4 h-4 text-[#6B6D77] dark:text-[#D0D0D0] flex-shrink-0" />
+        <span className="text-xs text-[#6B6D77] dark:text-[#D0D0D0]">
           {status === 'ERROR' ? 'Live weather unavailable' : 'Loading live weather…'}
         </span>
       </div>
@@ -85,7 +85,7 @@ export const WeatherStrip: React.FC<WeatherStripProps> = ({ className = '' }) =>
   return (
     <div
       data-testid="weather-strip"
-      className={`bg-white dark:bg-[#17181C] border border-[#DEDEDA] dark:border-[#2E3038] rounded-xl shadow-xs ${className}`}
+      className={`bg-white dark:bg-[#212121] border border-[#DEDEDA] dark:border-[#B4B4B4] rounded-xl shadow-xs ${className}`}
     >
       <div className="flex items-center gap-4 px-4 py-3 flex-wrap">
         {/* Temperature + condition */}
@@ -93,16 +93,16 @@ export const WeatherStrip: React.FC<WeatherStripProps> = ({ className = '' }) =>
           <Icon className={`w-8 h-8 flex-shrink-0 ${tint}`} />
           <div>
             <div className="flex items-baseline gap-0.5">
-              <span className="font-data text-2xl font-black tracking-tight text-[#12294D] dark:text-[#F1F1EF]">
+              <span className="font-data text-2xl font-black tracking-tight text-[#12294D] dark:text-[#FFFFFF]">
                 {Math.round(c.temperatureC)}
               </span>
-              <span className="text-sm font-bold text-[#6B6D77] dark:text-[#A1A3AC]">°C</span>
+              <span className="text-sm font-bold text-[#6B6D77] dark:text-[#D0D0D0]">°C</span>
             </div>
             <span className={`block text-[10px] font-bold ${tint}`}>{info.label}</span>
           </div>
         </div>
 
-        <span className="hidden sm:block w-px self-stretch bg-[#EDEDEA] dark:bg-[#2E3038]" />
+        <span className="hidden sm:block w-px self-stretch bg-[#EDEDEA] dark:bg-[#B4B4B4]" />
 
         {/* Four headline parameters */}
         <div className="flex items-center gap-4 flex-1 min-w-0 flex-wrap">
@@ -113,12 +113,12 @@ export const WeatherStrip: React.FC<WeatherStripProps> = ({ className = '' }) =>
             { icon: Umbrella, label: 'Rain', value: `${c.precipitationMm.toFixed(1)} mm` }
           ].map((m) => (
             <div key={m.label} className="flex items-center gap-1.5">
-              <m.icon className="w-3.5 h-3.5 text-[#1A3A6B] dark:text-[#9DB8DC] flex-shrink-0" />
+              <m.icon className="w-3.5 h-3.5 text-[#1A3A6B] dark:text-[#D0D0D0] flex-shrink-0" />
               <div className="leading-none">
-                <span className="block text-[9px] uppercase font-bold text-[#6B6D77] dark:text-[#A1A3AC] font-data">
+                <span className="block text-[9px] uppercase font-bold text-[#6B6D77] dark:text-[#D0D0D0] font-data">
                   {m.label}
                 </span>
-                <span className="block font-data text-xs font-bold text-[#14151A] dark:text-[#F1F1EF] tabular-nums mt-0.5">
+                <span className="block font-data text-xs font-bold text-[#14151A] dark:text-[#FFFFFF] tabular-nums mt-0.5">
                   {m.value}
                 </span>
               </div>
@@ -131,8 +131,8 @@ export const WeatherStrip: React.FC<WeatherStripProps> = ({ className = '' }) =>
           <span
             className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold font-data ${
               stale
-                ? 'bg-[#FAF0D8] dark:bg-[#241B0B]/60 text-[#A15C07] dark:text-[#D9A03A]'
-                : 'bg-[#E4F3E9] dark:bg-[#14251F]/60 text-[#126B34] dark:text-[#7CC99A]'
+                ? 'bg-[#FAF0D8] dark:bg-[#3A2A0A]/60 text-[#A15C07] dark:text-[#D0D0D0]'
+                : 'bg-[#E4F3E9] dark:bg-[#0A2E22]/60 text-[#126B34] dark:text-[#E0E0E0]'
             }`}
             title={stale ? 'Not a current observation' : 'Live observation from Open-Meteo'}
           >
@@ -142,7 +142,7 @@ export const WeatherStrip: React.FC<WeatherStripProps> = ({ className = '' }) =>
             </span>
             {stale ? 'STALE' : 'LIVE'}
           </span>
-          <span className="text-[10px] font-data text-[#6B6D77] dark:text-[#A1A3AC] hidden md:inline">
+          <span className="text-[10px] font-data text-[#6B6D77] dark:text-[#D0D0D0] hidden md:inline">
             {relativeAge(weather.fetchedAt)}
           </span>
           <button
@@ -150,7 +150,7 @@ export const WeatherStrip: React.FC<WeatherStripProps> = ({ className = '' }) =>
             disabled={offline}
             title={offline ? 'Unavailable while offline' : 'Refresh weather'}
             aria-label="Refresh weather"
-            className="p-1.5 rounded-md text-[#6B6D77] dark:text-[#A1A3AC] hover:bg-[#F1F1EF] dark:hover:bg-[#1C1D22] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-1.5 rounded-md text-[#6B6D77] dark:text-[#D0D0D0] hover:bg-[#F1F1EF] dark:hover:bg-[#1C1D22] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${status === 'LOADING' ? 'animate-spin' : ''}`} />
           </button>

@@ -20,6 +20,15 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
+import { requestOtp, verifyOtp, smsStatus, getSession } from './otp.mjs';
+import {
+  authenticate, authorize, rateLimit,
+  createAlert, listAlerts, setAlertActive,
+  createIncident, listIncidents, setIncidentStatus,
+  stats as recordStats,
+} from './records.mjs';
+import { initDb, dbStatus } from './db.mjs';
+import { explorerHtml } from './api-explorer.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, 'data');
@@ -140,9 +149,19 @@ async function fetchUpstream(url, payload, stream, signal) {
 }
 
 function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // Locked to configured origins. This used to be '*' across the whole API,
+  // which is unacceptable now that the API issues sessions and mutates records.
+  const allowed = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const origin = res.req?.headers?.origin;
+  if (origin && allowed.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age', '86400');
 }
 
@@ -178,7 +197,7 @@ function readBody(req, maxBytes = MAX_BODY_BYTES) {
  * Validate a raw beacon and build a normalized report.
  * Throws an Error with a `.status` when the payload is invalid.
  */
-function createReport(body) {
+function createReport(body, session) {
   if (!body || typeof body !== 'object') {
     const err = new Error('Invalid JSON body');
     err.status = 400;
@@ -216,6 +235,14 @@ function createReport(body) {
     priorityScore: 98,
     priorityLevel: 'CRITICAL',
     status: 'PENDING',
+    // Provenance. A beacon is deliberately allowed WITHOUT a session — the SOS
+    // button must work on the login screen for someone with no account, and
+    // blocking an emergency call to prevent forgery would be the wrong trade.
+    // Instead every beacon records whether the sender was verified, so the
+    // triage queue can see provenance at a glance.
+    verified: Boolean(session),
+    reportedByRole: session ? session.role : 'UNVERIFIED',
+    reportedByPhone: session ? session.phone : null,
     aiExplanation:
       `Server bridge: SOS beacon received at ${nowIso()} with ` +
       `auto-detected GPS (accuracy ${Number.isFinite(accuracy) ? `~${Math.round(accuracy)} m` : 'n/a'}). ` +
@@ -240,7 +267,33 @@ function broadcast(report) {
 /* ------------------------------- handlers ------------------------------- */
 
 function handleHealth(res) {
-  sendJson(res, 200, { ok: true, service: 'NEXORA SOS Bridge', uptimeSec: process.uptime(), reports: reports.length });
+  // `dbStatus()` reports whether PostgreSQL is actually serving or the app has
+  // fallen back to JSON, so a degraded mode is visible rather than silent.
+  // The record counts come from records.mjs's `stats()`, which queries whichever
+  // backend is live — `db` is not in scope here.
+  void recordStats()
+    .then((s) => {
+      sendJson(res, 200, {
+        ok: true,
+        service: 'NEXORA SOS Bridge',
+        uptimeSec: process.uptime(),
+        reports: reports.length,
+        alerts: s.alerts,
+        incidents: s.incidents,
+        db: dbStatus(),
+      });
+    })
+    .catch((err) => {
+      // Never let a health probe take the process down.
+      sendJson(res, 200, {
+        ok: true,
+        service: 'NEXORA SOS Bridge',
+        uptimeSec: process.uptime(),
+        reports: reports.length,
+        db: dbStatus(),
+        error: String(err?.message ?? err),
+      });
+    });
 }
 
 function handleList(res, url) {
@@ -275,9 +328,22 @@ function handleSubmit(req, res) {
       return;
     }
 
+    // A session is optional here by design (see createReport), but when one is
+    // present it must be real, and the sender is rate limited either way so a
+    // single client cannot flood the live SOS queue.
+    const auth = authenticate(req);
+    const session = auth.ok ? auth.session : null;
+    const limit = rateLimit(req, session, 12); // 12 beacons/min is generous for a human
+    if (!limit.allowed) {
+      sendJson(res, 429, {
+        error: `Too many SOS beacons sent. Try again in ${limit.retryAfterSeconds}s.`,
+      });
+      return;
+    }
+
     let report;
     try {
-      report = createReport(body);
+      report = createReport(body, session);
     } catch (err) {
       sendJson(res, err.status || 400, { error: err.message });
       return;
@@ -287,7 +353,11 @@ function handleSubmit(req, res) {
     if (reports.length > MAX_STORED_REPORTS) reports.length = MAX_STORED_REPORTS;
     persistReports();
     broadcast(report);
-    console.log(`[sos-server] + ${report.id} @ ${report.locationName} (${report.lat.toFixed(4)}, ${report.lng.toFixed(4)})`);
+    console.log(
+      `[sos-server] + ${report.id} @ ${report.locationName} `
+      + `(${report.lat.toFixed(4)}, ${report.lng.toFixed(4)}) `
+      + `[${report.verified ? `verified ${report.reportedByRole}` : 'UNVERIFIED'}]`
+    );
 
     sendJson(res, 201, report);
   });
@@ -398,9 +468,10 @@ async function handleChat(req, res) {
  * Accepts multipart/form-data with fields:
  *   file       — the image (any format)
  *   model_type — "fire_smoke" | "flood" | "auto" (default: "auto")
+ *   include_context — "1" (default) runs the COCO person/car pass, "0" skips it
  *
  * Saves the image to a temp file, calls server/yolo_detect.py via Python
- * (which runs on the local GPU using ultralytics), and returns JSON.
+ * (which runs on the local CPU using ultralytics), and returns JSON.
  */
 async function handleYoloDetect(req, res) {
   const contentType = req.headers['content-type'] || '';
@@ -461,6 +532,10 @@ async function handleYoloDetect(req, res) {
   let imageBuffer = null;
   let imageExt = '.jpg';
   let modelType = 'auto';
+  // The COCO person/car "context" pass is on by default. It is a separate,
+  // clearly-labelled box set — see yolo_detect.py for why it must not influence
+  // the disaster verdict.
+  let includeContext = true;
 
   for (const part of parts) {
     const nameMatch = part.headers.match(/name="([^"]+)"/);
@@ -470,6 +545,9 @@ async function handleYoloDetect(req, res) {
     if (fieldName === 'model_type') {
       const val = part.body.toString().trim();
       if (['fire_smoke', 'flood', 'auto'].includes(val)) modelType = val;
+    }
+    if (fieldName === 'include_context') {
+      includeContext = !['0', 'false', 'no', 'off'].includes(part.body.toString().trim().toLowerCase());
     }
 
     if (fieldName === 'file') {
@@ -503,35 +581,89 @@ async function handleYoloDetect(req, res) {
 
   // Call Python YOLO script
   const scriptPath = join(__dirname, 'yolo_detect.py');
+  // Allow an explicit interpreter (YOLO_PYTHON) so users on the Windows Store
+  // python alias, or with several Pythons installed, can pin the right one.
+  const pythonBin = process.env.YOLO_PYTHON || 'python';
+  const timeoutMs = Number(process.env.YOLO_TIMEOUT_MS) || 120000;
+  // Ultralytics prints banners to stdout, so the script also writes its JSON to
+  // this file. Prefer it; fall back to parsing stdout's last JSON line.
+  const outPath = join(tmpdir(), `nexora_yolo_${Date.now()}.json`);
+
   const result = await new Promise((resolve) => {
     let stdout = '';
     let stderr = '';
-    const py = spawn('python', [scriptPath, tmpPath, modelType], {
-      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      try { unlinkSync(tmpPath); } catch { /* noop */ }
+      try { unlinkSync(outPath); } catch { /* noop */ }
+      resolve(value);
+    };
+
+    const py = spawn(pythonBin, [scriptPath, tmpPath, modelType, outPath, includeContext ? '1' : '0'], {
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' },
+      windowsHide: true,
     });
+
     py.stdout.on('data', d => { stdout += d.toString(); });
     py.stderr.on('data', d => { stderr += d.toString(); });
-    py.on('close', (code) => {
-      try { unlinkSync(tmpPath); } catch { /* noop */ }
-      if (code !== 0 || !stdout.trim()) {
-        resolve({ ok: false, error: stderr.trim() || 'Python exited with code ' + code });
-      } else {
-        try {
-          resolve(JSON.parse(stdout.trim()));
-        } catch {
-          resolve({ ok: false, error: 'Invalid JSON from Python: ' + stdout.slice(0, 200) });
-        }
+
+    // Read the result file first, then fall back to the last JSON-looking line
+    // of stdout so stray library chatter cannot break parsing.
+    const readParsed = () => {
+      try {
+        const txt = readFileSync(outPath, 'utf8').trim();
+        if (txt) return JSON.parse(txt);
+      } catch { /* fall through to stdout */ }
+      const lines = stdout.trim().split(/\r?\n/).filter(Boolean);
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const t = lines[i].trim();
+        if (!t.startsWith('{')) continue;
+        try { return JSON.parse(t); } catch { /* keep looking */ }
       }
+      return null;
+    };
+
+    py.on('close', (code) => {
+      // yolo_detect.py reports failures as JSON. Read that first — previously
+      // only stderr was inspected, so every Python-side error collapsed into
+      // the useless "Python exited with code 1".
+      const parsed = readParsed();
+
+      if (parsed && parsed.ok === false) {
+        finish({ ok: false, error: parsed.error || stderr.trim() || 'YOLO detection failed' });
+        return;
+      }
+      if (parsed) { finish(parsed); return; }
+
+      // Nothing parseable came back — build a message that actually helps.
+      const detail = (stderr.trim() || stdout.trim()).slice(-600);
+      finish({
+        ok: false,
+        error: detail
+          ? `YOLO script failed (exit ${code}): ${detail}`
+          : `YOLO script produced no output and exited with code ${code}. `
+            + `Check that "${pythonBin}" exists and that `
+            + `"${scriptPath}" is reachable.`,
+      });
     });
+
     py.on('error', (err) => {
-      try { unlinkSync(tmpPath); } catch { /* noop */ }
-      resolve({ ok: false, error: `Failed to spawn Python: ${err.message}` });
+      finish({
+        ok: false,
+        error: err.code === 'ENOENT'
+          ? `Python executable "${pythonBin}" was not found. Install Python 3.10+ `
+            + `or set the YOLO_PYTHON environment variable to its full path.`
+          : `Failed to spawn Python (${pythonBin}): ${err.message}`,
+      });
     });
-    // 60 second timeout
-    setTimeout(() => {
+
+    const timer = setTimeout(() => {
       py.kill();
-      resolve({ ok: false, error: 'YOLO inference timed out after 60s' });
-    }, 60000);
+      finish({ ok: false, error: `YOLO inference timed out after ${Math.round(timeoutMs / 1000)}s` });
+    }, timeoutMs);
+    timer.unref?.();
   });
 
   if (!result.ok) {
@@ -540,6 +672,50 @@ async function handleYoloDetect(req, res) {
   }
 
   sendJson(res, 200, { ...result, image_preview: imageDataUrl });
+}
+
+/* ------------------------------ OTP auth --------------------------------- */
+/**
+ * POST /api/auth/otp/request   { phone, role? }  -> issues a real SMS OTP
+ * POST /api/auth/otp/verify    { phone, code }   -> exchanges it for a session
+ * GET  /api/auth/otp/status                     -> is a real SMS gateway configured?
+ */
+async function handleOtpRequest(req, res) {
+  let body;
+  try {
+    body = JSON.parse(await readBody(req));
+  } catch (err) {
+    sendJson(res, err.status || 400, { ok: false, error: 'Invalid request body.' });
+    return;
+  }
+
+  try {
+    const result = await requestOtp(body.phone, { role: cleanString(body.role, 'CITIZEN') });
+    sendJson(res, result.ok ? 200 : result.status || 400, result);
+  } catch (err) {
+    sendJson(res, err.status || 400, { ok: false, error: err.message });
+  }
+}
+
+async function handleOtpVerify(req, res) {
+  let body;
+  try {
+    body = JSON.parse(await readBody(req));
+  } catch (err) {
+    sendJson(res, err.status || 400, { ok: false, error: 'Invalid request body.' });
+    return;
+  }
+
+  try {
+    const result = verifyOtp(body.phone, body.code);
+    sendJson(res, result.ok ? 200 : result.status || 400, result);
+  } catch (err) {
+    sendJson(res, err.status || 400, { ok: false, error: err.message });
+  }
+}
+
+function handleOtpStatus(req, res) {
+  sendJson(res, 200, { ok: true, ...smsStatus() });
 }
 
 function handleSSE(req, res) {
@@ -568,6 +744,162 @@ function handleSSE(req, res) {
   });
 }
 
+/* ------------------- alerts, incidents & SOS triage ---------------------- */
+/**
+ * These are the writes that previously only mutated browser state (and were
+ * lost on reload while the UI claimed success). Each one is now persisted and,
+ * where it matters, gated on a verified OTP session + role.
+ */
+
+async function handleJson(req, res, handler) {
+  let body;
+  try {
+    body = JSON.parse(await readBody(req));
+  } catch (err) {
+    sendJson(res, err.status || 400, { ok: false, error: 'Invalid request body.' });
+    return;
+  }
+  await handler(body || {});
+}
+
+/** Reject the request unless the caller holds a session with an allowed role. */
+function guard(req, res, permission) {
+  const auth = authorize(req, permission);
+  if (!auth.ok) {
+    sendJson(res, auth.status, { ok: false, error: auth.error });
+    return null;
+  }
+  const limit = rateLimit(req, auth.session);
+  if (!limit.allowed) {
+    sendJson(res, 429, {
+      ok: false,
+      error: `Too many requests. Try again in ${limit.retryAfterSeconds}s.`,
+      retryAfterSeconds: limit.retryAfterSeconds,
+    });
+    return null;
+  }
+  return auth.session;
+}
+
+function handleSessionInfo(req, res) {
+  const auth = authenticate(req);
+  if (!auth.ok) {
+    sendJson(res, auth.status, { ok: false, error: auth.error });
+    return;
+  }
+  sendJson(res, 200, {
+    ok: true,
+    phone: auth.session.phone,
+    role: auth.session.role,
+    expiresAt: new Date(auth.session.expiresAt).toISOString(),
+  });
+}
+
+async function handleListAlerts(req, res, url) {
+  sendJson(res, 200, { ok: true, alerts: await listAlerts(url.searchParams.get('limit')) });
+}
+
+async function handleCreateAlert(req, res) {
+  const session = guard(req, res, 'ALERT_BROADCAST');
+  if (!session) return;
+  await handleJson(req, res, async (body) => {
+    const alert = await createAlert(body, session);
+    // Push to any dashboard watching the stream.
+    for (const client of sseClients) {
+      try {
+        client.res.write(`event: alert\ndata: ${JSON.stringify(alert)}\n\n`);
+      } catch { /* client will be reaped by its own heartbeat */ }
+    }
+    console.log(`[sos-server] CAP bulletin ${alert.id} broadcast by ${session.role} ${session.phone}`);
+    sendJson(res, 201, { ok: true, alert });
+  });
+}
+
+async function handlePatchAlert(req, res, id) {
+  const session = guard(req, res, 'ALERT_BROADCAST');
+  if (!session) return;
+  const match = id.match(/^([^/]+)$/);
+  if (!match) {
+    sendJson(res, 400, { ok: false, error: 'Malformed alert id.' });
+    return;
+  }
+  await handleJson(req, res, async (body) => {
+    const alert = await setAlertActive(decodeURIComponent(match[1]), body.active);
+    if (!alert) {
+      sendJson(res, 404, { ok: false, error: 'Alert not found.' });
+      return;
+    }
+    sendJson(res, 200, { ok: true, alert });
+  });
+}
+
+async function handleListIncidents(req, res, url) {
+  sendJson(res, 200, { ok: true, incidents: await listIncidents(url.searchParams.get('limit')) });
+}
+
+async function handleCreateIncident(req, res) {
+  const session = guard(req, res, 'INCIDENT_CREATE');
+  if (!session) return;
+  await handleJson(req, res, async (body) => {
+    const incident = await createIncident(body, session);
+    console.log(`[sos-server] incident ${incident.id} filed by ${session.role} ${session.phone}`);
+    sendJson(res, 201, { ok: true, incident });
+  });
+}
+
+async function handlePatchIncident(req, res, id) {
+  const session = guard(req, res, 'SOS_TRIAGE');
+  if (!session) return;
+  await handleJson(req, res, async (body) => {
+    const incident = await setIncidentStatus(decodeURIComponent(id), body.status);
+    if (!incident) {
+      sendJson(res, 404, { ok: false, error: 'Incident not found or status invalid.' });
+      return;
+    }
+    sendJson(res, 200, { ok: true, incident });
+  });
+}
+
+/**
+ * PATCH /api/sos/:id — triage a beacon (resolve, false-alarm, priority).
+ * Previously these lived only in the browser, so marking a report as a false
+ * alarm did nothing: it came back on the next page load.
+ */
+function handlePatchSOS(req, res, id) {
+  const session = guard(req, res, 'SOS_TRIAGE');
+  if (!session) return;
+  handleJson(req, res, (body) => {
+    const report = reports.find((r) => r.id === id);
+    if (!report) {
+      sendJson(res, 404, { ok: false, error: 'SOS report not found.' });
+      return;
+    }
+    if (body.status) {
+      const allowed = ['PENDING', 'ACKNOWLEDGED', 'RESOLVED', 'FALSE_ALARM'];
+      if (!allowed.includes(body.status)) {
+        sendJson(res, 400, { ok: false, error: `status must be one of ${allowed.join(', ')}` });
+        return;
+      }
+      report.status = body.status;
+    }
+    if (typeof body.priorityScore === 'number') {
+      report.priorityScore = clampInt(body.priorityScore, 0, 100, report.priorityScore);
+      report.priorityLevel =
+        report.priorityScore >= 85 ? 'CRITICAL'
+          : report.priorityScore >= 60 ? 'HIGH'
+            : report.priorityScore >= 30 ? 'MEDIUM' : 'LOW';
+    }
+    if (typeof body.note === 'string') {
+      report.triageNote = cleanString(body.note);
+    }
+    report.triagedBy = session.role;
+    report.triagedAt = nowIso();
+    persistReports();
+    broadcast(report);
+    sendJson(res, 200, { ok: true, report });
+  });
+}
+
 /* -------------------------------- server -------------------------------- */
 
 const server = createServer((req, res) => {
@@ -587,10 +919,46 @@ const server = createServer((req, res) => {
   if (req.method === 'POST' && path === '/api/chat')         return handleChat(req, res);
   if (req.method === 'GET'  && path === '/api/events')       return handleSSE(req, res);
   if (req.method === 'POST' && path === '/api/yolo/detect')  return handleYoloDetect(req, res);
+  if (req.method === 'POST' && path === '/api/auth/otp/request') return handleOtpRequest(req, res);
+  if (req.method === 'POST' && path === '/api/auth/otp/verify')  return handleOtpVerify(req, res);
+  if (req.method === 'GET'  && path === '/api/auth/otp/status')  return handleOtpStatus(req, res);
+  if (req.method === 'GET'  && path === '/api/auth/session')     return handleSessionInfo(req, res);
 
-  if (req.method === 'GET' && path === '/') {
+  // ── Records (role-checked, persisted) ──
+  if (req.method === 'GET'  && path === '/api/alerts')    return handleListAlerts(req, res, url);
+  if (req.method === 'POST' && path === '/api/alerts')    return handleCreateAlert(req, res);
+  if (req.method === 'GET'  && path === '/api/incidents') return handleListIncidents(req, res, url);
+  if (req.method === 'POST' && path === '/api/incidents') return handleCreateIncident(req, res);
+
+  const alertPatch = path.match(/^\/api\/alerts\/([^/]+)$/);
+  if (req.method === 'PATCH' && alertPatch) return handlePatchAlert(req, res, alertPatch[1]);
+
+  const incPatch = path.match(/^\/api\/incidents\/([^/]+)$/);
+  if (req.method === 'PATCH' && incPatch) return handlePatchIncident(req, res, incPatch[1]);
+
+  const sosPatch = path.match(/^\/api\/sos\/([^/]+)$/);
+  if (req.method === 'PATCH' && sosPatch) return handlePatchSOS(req, res, sosPatch[1]);
+
+  // A browsable view of the backend rather than a single line of text.
+  // `/api/plain` keeps the old plain-text listing, so any script that scraped
+  // the root still gets plain text — it must be matched OUTSIDE the block below,
+  // because that block's condition does not include this path.
+  if (req.method === 'GET' && path === '/api/plain') {
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('NEXORA Bridge running. Endpoints: /api/health, /api/sos, /api/events, /api/chat');
+    res.end(
+      'NEXORA Bridge running. Endpoints: /api/health, /api/sos, /api/events, '
+      + '/api/chat, /api/yolo/detect, /api/alerts, /api/incidents, '
+      + '/api/auth/otp/request, /api/auth/otp/verify, /api/auth/session'
+    );
+    return;
+  }
+
+  if (req.method === 'GET' && (path === '/' || path === '/api')) {
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+    });
+    res.end(explorerHtml());
     return;
   }
 
@@ -598,7 +966,24 @@ const server = createServer((req, res) => {
 });
 
 loadReports();
+
+// Connect to PostgreSQL before accepting traffic, so the first request does not
+// race the pool. initDb() never throws: with no DATABASE_URL, or a database
+// that is down, it logs the reason and the app runs on the JSON files.
+initDb().then((r) => {
+  const st = dbStatus();
+  console.log(`[sos-server] Database: ${st.backend}${st.error ? ` (${st.error})` : ''}`);
+  void r;
+});
+
 server.listen(PORT, () => {
+  const sms = smsStatus();
   console.log(`[sos-server] NEXORA SOS Bridge listening on http://localhost:${PORT}`);
   console.log(`[sos-server] Stored reports: ${reports.length}`);
+  console.log(
+    `[sos-server] SMS OTP provider: ${sms.provider}`
+    + (sms.smsConfigured
+      ? ' (live gateway configured)'
+      : ' — DEV MODE: no SMS gateway configured, OTPs print to this terminal')
+  );
 });

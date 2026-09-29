@@ -17,7 +17,7 @@ const MapRecenter: React.FC<{ center: [number, number]; zoom: number }> = ({ cen
 };
 
 /**
- * Realistic basemap providers â€” ALL free, no API key required.
+ * Realistic basemap providers — ALL free, no API key required.
  * "Streets" and "Satellite" use Esri's public tile service (Google-Maps-like
  * quality with full place names); "Satellite" stacks a labels overlay so
  * places remain readable over imagery. "OSM" is the classic OpenStreetMap
@@ -80,9 +80,15 @@ const TILE_PROVIDERS: Record<MapStyle, TileProvider> = {
  * anyone with a browser would expose vulnerable people to stalkers and
  * looters, so it stays an authority-only layer.
  */
-export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 'public' }> = ({
+export const ZoneMap: React.FC<{
+  fullScreen?: boolean;
+  audience?: 'authority' | 'public';
+  /** Overrides the default height. Use when something sits below the map. */
+  heightClass?: string;
+}> = ({
   fullScreen = false,
-  audience = 'authority'
+  audience = 'authority',
+  heightClass
 }) => {
   const showSosLayer = audience === 'authority';
   const {
@@ -358,8 +364,13 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
     [13.0890, 80.2857]
   ];
 
-  // Effective provider (user choice, or OSM once a tile failure triggers fallback)
-  const effectiveStyle: MapStyle = provider ?? mapStyle;
+  // Effective provider. A light basemap inside the dark UI is the single most
+  // jarring thing on the page, so when the operator has NOT explicitly chosen a
+  // style the basemap follows the theme. An explicit choice is always honoured;
+  // a tile-failure fallback to OSM is likewise left alone (OSM has no dark
+  // variant, so leaving it is better than flipping back mid-error).
+  const effectiveStyle: MapStyle =
+    provider ?? (isDark ? 'dark' : mapStyle);
   const providerCfg = TILE_PROVIDERS[effectiveStyle];
 
   const handleTileError = () => {
@@ -380,19 +391,21 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
 
   return (
     <div className={`nexora-card overflow-hidden flex flex-col ${
-      fullScreen ? 'h-[calc(100vh-140px)]' : 'h-[560px] lg:h-[640px]'
-    } relative shadow-xs border border-[#DEDEDA] bg-white rounded-xl`}>
+      // heightClass lets a page that stacks content *below* the map cap it, so
+      // the map does not claim the whole viewport and push the rest off-screen.
+      heightClass ?? (fullScreen ? 'h-[calc(100vh-140px)]' : 'h-[560px] lg:h-[640px]')
+    } relative shadow-xs border border-[#DEDEDA] bg-white rounded-xl dark:bg-[#2F2F2F] dark:border-[#3D3D3D] `}>
       
       {/* MAP HEADER / LAYER FILTER CONTROLS */}
-      <div className="px-4 py-3 bg-white border-b border-[#DEDEDA] flex flex-wrap items-center justify-between gap-3 z-20">
+      <div className="px-4 py-3 bg-white border-b border-[#DEDEDA] flex flex-wrap items-center justify-between gap-3 z-20 dark:bg-[#2F2F2F] dark:border-[#3D3D3D]">
         <div className="flex items-center gap-3">
-          <span className="font-heading font-bold text-sm text-[#14151A] flex items-center gap-1.5">
-            <Layers className="w-4 h-4 text-[#1A3A6B]" />
+          <span className="font-heading font-bold text-sm text-[#14151A] flex items-center gap-1.5 dark:text-[#FFFFFF]">
+            <Layers className="w-4 h-4 text-[#1A3A6B] dark:text-[#E0E0E0]" />
             {t('map_title', 'Live Disaster & Rescue GIS Grid')}
           </span>
 
           {/* Real-Time Telemetry Status Badge */}
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#F1F1EF] border border-[#DEDEDA]">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#F1F1EF] border border-[#DEDEDA] dark:bg-[#262626] dark:border-[#3D3D3D]">
             <span
               className={`w-2 h-2 rounded-full ${
                 dataStatus === 'LIVE'
@@ -403,13 +416,13 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
               }`}
             />
             <span
-              className={
+              className={`${
                 dataStatus === 'LIVE'
                   ? 'text-[#126B34]'
                   : dataStatus === 'UPDATING' || dataStatus === 'SYNCING'
                   ? 'text-[#1A3A6B]'
                   : 'text-[#B54708]'
-              }
+} dark:text-[#D0D0D0] dark:text-[#E0E0E0] `}
             >
               {dataStatus === 'LIVE'
                 ? t('data_live', 'LIVE')
@@ -419,8 +432,8 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
                 ? t('data_syncing', 'SYNCING...')
                 : t('data_offline', 'OFFLINE')}
             </span>
-            <span className="text-[10px] font-normal text-[#5A5C66]">
-              â€¢ {t('data_last_updated', 'LAST UPDATED')}: {secondsAgo}{t('data_seconds_ago', 's ago')}
+            <span className="text-[10px] font-normal text-[#5A5C66] dark:text-[#D0D0D0]">
+              • {t('data_last_updated', 'LAST UPDATED')}: {secondsAgo}{t('data_seconds_ago', 's ago')}
             </span>
           </div>
         </div>
@@ -433,7 +446,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
             onClick={() => setActiveLayers(p => ({ ...p, zones: !p.zones }))}
             className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
               activeLayers.zones ? 'bg-[#1A3A6B] text-white shadow-xs' : 'bg-[#F1F1EF] text-[#5A5C66] hover:bg-[#EEF2F8]'
-            }`}
+            } dark:text-[#D0D0D0] dark:bg-[#262626] `}
           >
             Zones
           </button>
@@ -445,7 +458,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
               onClick={() => setActiveLayers(p => ({ ...p, sos: !p.sos }))}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                 activeLayers.sos ? 'bg-[#B42318] text-white shadow-2xs' : 'bg-[#F8F8F7] text-[#5A5C66] hover:bg-[#EFEFEC]'
-              }`}
+              } dark:text-[#D0D0D0] dark:bg-[#262626] `}
             >
               SOS ({sosReports.filter(r => r.status === 'PENDING').length})
             </button>
@@ -456,7 +469,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
             onClick={() => setActiveLayers(p => ({ ...p, sensors: !p.sensors }))}
             className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
               activeLayers.sensors ? 'bg-[#12294D] text-white shadow-2xs' : 'bg-[#F8F8F7] text-[#5A5C66] hover:bg-[#EFEFEC]'
-            }`}
+            } dark:text-[#D0D0D0] dark:bg-[#262626] `}
           >
             Sensors ({sensorStations.length})
           </button>
@@ -466,7 +479,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
             onClick={() => setActiveLayers(p => ({ ...p, shelters: !p.shelters }))}
             className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
               activeLayers.shelters ? 'bg-[#126B34] text-white shadow-2xs' : 'bg-[#F8F8F7] text-[#5A5C66] hover:bg-[#EFEFEC]'
-            }`}
+            } dark:text-[#D0D0D0] dark:bg-[#262626] `}
           >
             Shelters ({shelters.length})
           </button>
@@ -476,7 +489,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
             onClick={() => setActiveLayers(p => ({ ...p, hospitals: !p.hospitals }))}
             className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
               activeLayers.hospitals ? 'bg-[#B42318] text-white shadow-2xs' : 'bg-[#F8F8F7] text-[#5A5C66] hover:bg-[#EFEFEC]'
-            }`}
+            } dark:text-[#D0D0D0] dark:bg-[#262626] `}
           >
             Hospitals ({hospitals.length})
           </button>
@@ -486,7 +499,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
             onClick={() => setActiveLayers(p => ({ ...p, teams: !p.teams }))}
             className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
               activeLayers.teams ? 'bg-[#14151A] text-white shadow-2xs' : 'bg-[#F8F8F7] text-[#5A5C66] hover:bg-[#EFEFEC]'
-            }`}
+            } dark:text-[#D0D0D0] dark:bg-[#262626] `}
           >
             Rescue Teams
           </button>
@@ -496,7 +509,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
             onClick={() => setActiveLayers(p => ({ ...p, damage: !p.damage }))}
             className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
               activeLayers.damage ? 'bg-[#5A5C66] text-white shadow-2xs' : 'bg-[#F8F8F7] text-[#5A5C66] hover:bg-[#EFEFEC]'
-            }`}
+            } dark:text-[#D0D0D0] dark:bg-[#262626] `}
           >
             Drone AI ({damageScans.length})
           </button>
@@ -506,7 +519,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
             onClick={() => setActiveLayers(p => ({ ...p, evacRoute: !p.evacRoute }))}
             className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
               activeLayers.evacRoute ? 'bg-[#12294D] text-white shadow-2xs' : 'bg-[#F8F8F7] text-[#5A5C66] hover:bg-[#EFEFEC]'
-            }`}
+            } dark:text-[#D0D0D0] dark:bg-[#262626] `}
           >
             Safe Route
           </button>
@@ -518,10 +531,10 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
           <button
             onClick={handleLocateMe}
             disabled={isLocating}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#EFEFEC] text-[#12294D] hover:bg-[#DCDCD8] border border-[#DCDCD8] shadow-2xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#EFEFEC] text-[#12294D] hover:bg-[#DCDCD8] border border-[#DCDCD8] shadow-2xs transition-all cursor-pointer dark:text-[#FFFFFF] dark:bg-[#262626] dark:border-[#333333]"
             title={t('map_locate_me', 'My GPS Location')}
           >
-            <Crosshair className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin text-[#2C5C93]' : 'text-[#12294D]'}`} />
+            <Crosshair className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin text-[#2C5C93]' : 'text-[#12294D]'} dark:text-[#E0E0E0] dark:text-[#FFFFFF] `}/>
             <span>{isLocating ? t('map_locating', 'Locating...') : t('map_locate_me', 'My GPS Location')}</span>
           </button>
 
@@ -534,16 +547,16 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
             )}
             <button
               onClick={() => setStyleMenuOpen(o => !o)}
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-[#F8F8F7] hover:bg-[#EFEFEC] text-[#14151A] transition-all cursor-pointer border border-[#E4E4E0] inline-flex items-center gap-1.5"
+              className="text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-[#F8F8F7] hover:bg-[#EFEFEC] text-[#14151A] transition-all cursor-pointer border border-[#E4E4E0] inline-flex items-center gap-1.5 dark:text-[#FFFFFF] dark:bg-[#262626] dark:border-[#3D3D3D]"
               title={t('map_style', 'Basemap style')}
             >
-              <MapIcon className="w-3.5 h-3.5 text-[#1A3A6B]" />
+              <MapIcon className="w-3.5 h-3.5 text-[#1A3A6B] dark:text-[#E0E0E0]" />
               {providerCfg.name}
-              <ChevronDown className="w-3 h-3 text-[#6B6D77]" />
+              <ChevronDown className="w-3 h-3 text-[#6B6D77] dark:text-[#D0D0D0]" />
             </button>
 
             {styleMenuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 w-44 rounded-xl bg-white dark:bg-[#17181C] border border-[#DEDEDA] dark:border-[#2E3038] shadow-lg p-1.5">
+              <div className="absolute right-0 top-full mt-1.5 z-50 w-44 rounded-xl bg-white dark:bg-[#212121] border border-[#DEDEDA] dark:border-[#B4B4B4] shadow-lg p-1.5">
                 {(Object.keys(TILE_PROVIDERS) as MapStyle[]).map(style => (
                   <button
                     key={style}
@@ -551,7 +564,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
                     className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center justify-between ${
                       effectiveStyle === style
                         ? 'bg-[#EEF2F8] text-[#1A3A6B]'
-                        : 'text-[#14151A] dark:text-[#F1F1EF] hover:bg-[#EFEFEC] dark:hover:bg-[#1C1D22]'
+                        : 'text-[#14151A] dark:text-[#FFFFFF] hover:bg-[#EFEFEC] dark:hover:bg-[#1C1D22]'
                     }`}
                   >
                     {TILE_PROVIDERS[style].name}
@@ -577,7 +590,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
         >
           <MapRecenter center={mapCenter} zoom={mapZoom} />
 
-          {/* Tile Layer â€” realistic basemap with place names (no API key) */}
+          {/* Tile Layer — realistic basemap with place names (no API key) */}
           <TileLayer
             key={providerCfg.name}
             url={providerCfg.url}
@@ -634,15 +647,15 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
                   <Popup>
                     <div className="p-1 max-w-xs font-sans">
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="font-bold text-xs text-[#B42318] font-data">{report.id}</span>
-                        <span className="font-data text-xs font-bold text-[#14151A]">
+                        <span className="font-bold text-xs text-[#B42318] font-data dark:text-[#FFFFFF]">{report.id}</span>
+                        <span className="font-data text-xs font-bold text-[#14151A] dark:text-[#FFFFFF]">
                           Priority {report.priorityScore}
                         </span>
                       </div>
-                      <div className="text-xs font-semibold text-[#14151A]">{report.locationName}</div>
-                      <div className="text-[11px] text-[#5A5C66] mt-1">{report.aiExplanation}</div>
+                      <div className="text-xs font-semibold text-[#14151A] dark:text-[#FFFFFF]">{report.locationName}</div>
+                      <div className="text-[11px] text-[#5A5C66] mt-1 dark:text-[#D0D0D0]">{report.aiExplanation}</div>
                       <div className="mt-2 flex items-center justify-between">
-                        <span className="font-data text-xs font-bold text-[#B42318]">
+                        <span className="font-data text-xs font-bold text-[#B42318] dark:text-[#FFFFFF]">
                           {report.peopleCount} trapped
                         </span>
                         <button
@@ -668,30 +681,30 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
                 <Popup>
                   <div className="p-1.5 max-w-xs font-sans">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-xs text-[#12294D] font-data">{station.stationCode}</span>
+                      <span className="font-bold text-xs text-[#12294D] font-data dark:text-[#FFFFFF]">{station.stationCode}</span>
                       <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
                         station.status === 'ONLINE' ? 'bg-[#F0F7F4] text-[#2A6B4A]' : 'bg-[#FBF7EC] text-[#8A4D06]'
-                      }`}>
+                      } dark:text-[#D0D0D0] dark:text-[#E0E0E0] dark:bg-[#3A2A0A] `}>
                         {station.status}
                       </span>
                     </div>
-                    <div className="text-xs font-semibold text-[#14151A] mt-0.5">{station.name}</div>
+                    <div className="text-xs font-semibold text-[#14151A] mt-0.5 dark:text-[#FFFFFF]">{station.name}</div>
                     
                     {/* Live Telemetry Grid */}
-                    <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] font-data bg-[#F8F8F7] p-2 rounded-lg border border-[#E4E4E0]">
+                    <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] font-data bg-[#F8F8F7] p-2 rounded-lg border border-[#E4E4E0] dark:bg-[#262626] dark:border-[#3D3D3D]">
                       <div>Water Level: <strong>{station.waterLevelCm} cm</strong></div>
                       <div>Rainfall: <strong>{station.rainfallMm} mm/h</strong></div>
                       <div>Battery: <strong>{station.batteryPct}%</strong></div>
                       <div>LoRa RSSI: <strong>{station.loraRssiDbm} dBm</strong></div>
                     </div>
 
-                    <div className="mt-2 flex justify-between items-center text-[10px] text-[#5A5C66]">
+                    <div className="mt-2 flex justify-between items-center text-[10px] text-[#5A5C66] dark:text-[#D0D0D0]">
                       <span>Last ping: {station.lastPingTime}</span>
                       <button
                         onClick={() => setCurrentView('SENSORS')}
-                        className="text-[#12294D] font-bold hover:underline cursor-pointer"
+                        className="text-[#12294D] font-bold hover:underline cursor-pointer dark:text-[#FFFFFF]"
                       >
-                        Sensor Telemetry â†’
+                        Sensor Telemetry →
                       </button>
                     </div>
                   </div>
@@ -711,19 +724,19 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
                 >
                   <Popup>
                     <div className="p-1 max-w-xs font-sans">
-                      <div className="font-bold text-xs text-[#14151A]">{shelter.name}</div>
-                      <div className="text-[11px] text-[#5A5C66]">{shelter.address}</div>
+                      <div className="font-bold text-xs text-[#14151A] dark:text-[#FFFFFF]">{shelter.name}</div>
+                      <div className="text-[11px] text-[#5A5C66] dark:text-[#D0D0D0]">{shelter.address}</div>
                       <div className="mt-2 text-xs font-data flex items-center justify-between">
                         <span>Occupancy: {shelter.currentOccupancy}/{shelter.totalCapacity}</span>
-                        <span className="text-[#2A6B4A] font-bold">{available} Free</span>
+                        <span className="text-[#2A6B4A] font-bold dark:text-[#D0D0D0]">{available} Free</span>
                       </div>
-                      <div className="mt-2 pt-2 border-t border-[#E4E4E0] flex items-center justify-between">
-                        <span className="text-[10px] text-[#5A5C66]">Water: {shelter.resources.waterLiters}L</span>
+                      <div className="mt-2 pt-2 border-t border-[#E4E4E0] flex items-center justify-between dark:border-[#3D3D3D]">
+                        <span className="text-[10px] text-[#5A5C66] dark:text-[#D0D0D0]">Water: {shelter.resources.waterLiters}L</span>
                         <button
                           onClick={() => setCurrentView('SHELTER_EVACUATION')}
-                          className="text-[10px] font-bold text-[#12294D] hover:underline cursor-pointer"
+                          className="text-[10px] font-bold text-[#12294D] hover:underline cursor-pointer dark:text-[#FFFFFF]"
                         >
-                          Find Safe Route â†’
+                          Find Safe Route →
                         </button>
                       </div>
                     </div>
@@ -742,19 +755,19 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
               >
                 <Popup>
                   <div className="p-1 max-w-xs font-sans">
-                    <div className="font-bold text-xs text-[#B42318] flex items-center gap-1">
-                      <span>ðŸ¥</span>
+                    <div className="font-bold text-xs text-[#B42318] flex items-center gap-1 dark:text-[#FFFFFF]">
+                      <span>🏥</span>
                       <span>{hospital.name}</span>
                     </div>
-                    <div className="text-[11px] text-[#5A5C66] mt-0.5">{hospital.address}</div>
-                    <div className="mt-1.5 grid grid-cols-2 gap-1 text-[11px] font-data bg-[#FCF1F0] p-1.5 rounded border border-[#F3CFC9]">
+                    <div className="text-[11px] text-[#5A5C66] mt-0.5 dark:text-[#D0D0D0]">{hospital.address}</div>
+                    <div className="mt-1.5 grid grid-cols-2 gap-1 text-[11px] font-data bg-[#FCF1F0] p-1.5 rounded border border-[#F3CFC9] dark:bg-[#3F1414] dark:border-[#7F1D1D]">
                       <div>Total Beds: <strong>{hospital.totalBeds}</strong></div>
-                      <div>Free Beds: <strong className="text-[#2A6B4A]">{hospital.availableBeds}</strong></div>
+                      <div>Free Beds: <strong className="text-[#2A6B4A] dark:text-[#D0D0D0]">{hospital.availableBeds}</strong></div>
                       <div>ICU Beds: <strong>{hospital.icuBedsAvailable}</strong></div>
                       <div>Ambulances: <strong>{hospital.ambulanceStandbyCount}</strong></div>
                     </div>
-                    <div className="mt-2 text-[10px] text-[#5A5C66]">
-                      Emergency Contact: <strong className="text-[#14151A]">{hospital.contactEmergency}</strong>
+                    <div className="mt-2 text-[10px] text-[#5A5C66] dark:text-[#D0D0D0]">
+                      Emergency Contact: <strong className="text-[#14151A] dark:text-[#FFFFFF]">{hospital.contactEmergency}</strong>
                     </div>
                   </div>
                 </Popup>
@@ -771,11 +784,11 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
               >
                 <Popup>
                   <div className="p-1 font-sans">
-                    <div className="font-bold text-xs text-[#14151A]">{team.name}</div>
-                    <div className="text-[11px] text-[#14151A] mt-1">
+                    <div className="font-bold text-xs text-[#14151A] dark:text-[#FFFFFF]">{team.name}</div>
+                    <div className="text-[11px] text-[#14151A] mt-1 dark:text-[#FFFFFF]">
                       Status: <strong className="font-data">{team.status}</strong>
                     </div>
-                    <div className="text-[11px] text-[#5A5C66] mt-0.5">
+                    <div className="text-[11px] text-[#5A5C66] mt-0.5 dark:text-[#D0D0D0]">
                       {team.capabilities.join(', ')}
                     </div>
                   </div>
@@ -795,12 +808,12 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
                 >
                   <Popup>
                     <div className="p-1 font-sans">
-                      <div className="font-bold text-xs text-[#8A4D06] flex items-center gap-1">
+                      <div className="font-bold text-xs text-[#8A4D06] flex items-center gap-1 dark:text-[#E0E0E0]">
                         <AlertTriangle className="w-3.5 h-3.5" />
                         <span>Road Inundated / Blocked</span>
                       </div>
-                      <div className="text-xs font-semibold text-[#14151A] mt-1">{road.name}</div>
-                      <div className="text-[11px] text-[#5A5C66] mt-0.5">{road.reason}</div>
+                      <div className="text-xs font-semibold text-[#14151A] mt-1 dark:text-[#FFFFFF]">{road.name}</div>
+                      <div className="text-[11px] text-[#5A5C66] mt-0.5 dark:text-[#D0D0D0]">{road.reason}</div>
                     </div>
                   </Popup>
                 </Marker>
@@ -818,19 +831,19 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
                 >
                   <Popup>
                     <div className="p-1 max-w-xs font-sans">
-                      <div className="flex items-center justify-between text-xs font-bold text-[#14151A]">
+                      <div className="flex items-center justify-between text-xs font-bold text-[#14151A] dark:text-[#FFFFFF]">
                         <span>YOLOv8 Aerial Scan</span>
-                        <span className="text-[10px] bg-[#EFEFEC] text-[#12294D] border border-[#DCDCD8] px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-[#EFEFEC] text-[#12294D] border border-[#DCDCD8] px-1.5 py-0.5 rounded dark:text-[#FFFFFF] dark:bg-[#262626] dark:border-[#333333]">
                           {scan.overallSeverity}
                         </span>
                       </div>
-                      <div className="text-xs font-semibold text-[#14151A] mt-1">{scan.title}</div>
+                      <div className="text-xs font-semibold text-[#14151A] mt-1 dark:text-[#FFFFFF]">{scan.title}</div>
                       <img
                         src={scan.imageUrl}
                         alt="Drone Survey"
-                        className="w-full h-24 object-cover rounded-lg mt-1.5 border border-[#E4E4E0]"
+                        className="w-full h-24 object-cover rounded-lg mt-1.5 border border-[#E4E4E0] dark:border-[#3D3D3D]"
                       />
-                      <div className="text-[11px] text-[#5A5C66] mt-1">{scan.notes}</div>
+                      <div className="text-[11px] text-[#5A5C66] mt-1 dark:text-[#D0D0D0]">{scan.notes}</div>
                       <button
                         onClick={() => setCurrentView('DAMAGE_DETECTION')}
                         className="mt-2 w-full py-1 text-center bg-[#12294D] hover:bg-[#0F2140] text-white rounded text-[11px] font-bold cursor-pointer transition-colors"
@@ -875,7 +888,7 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
                     <div class="relative flex items-center justify-center">
                       <span class="absolute w-12 h-12 rounded-full bg-[#1A3A6B]/40 animate-ping"></span>
                       <div class="w-8 h-8 rounded-full bg-[#1A3A6B] border-2 border-[#1A3A6B] text-[#1A3A6B] flex items-center justify-center shadow-xl text-base font-bold">
-                        ðŸ“
+                        📍
                       </div>
                     </div>
                   `,
@@ -885,16 +898,16 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
               >
                 <Popup>
                   <div className="p-2 space-y-1 font-sans">
-                    <div className="flex items-center gap-1 text-[9px] font-data text-[#1A3A6B] font-bold uppercase tracking-wider">
+                    <div className="flex items-center gap-1 text-[9px] font-data text-[#1A3A6B] font-bold uppercase tracking-wider dark:text-[#E0E0E0]">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#1A3A6B] animate-pulse"></span>
                       <span>Focused Location</span>
                     </div>
-                    <div className="font-bold text-xs text-[#14151A]">{focusedMapLocation.title}</div>
+                    <div className="font-bold text-xs text-[#14151A] dark:text-[#FFFFFF]">{focusedMapLocation.title}</div>
                     {focusedMapLocation.address && (
-                      <div className="text-[11px] text-[#5A5C66] leading-tight">{focusedMapLocation.address}</div>
+                      <div className="text-[11px] text-[#5A5C66] leading-tight dark:text-[#D0D0D0]">{focusedMapLocation.address}</div>
                     )}
-                    <div className="text-[10px] text-[#6B6D77] font-mono pt-1 border-t border-[#DEDEDA]">
-                      {focusedMapLocation.lat.toFixed(4)}Â° N, {focusedMapLocation.lng.toFixed(4)}Â° E
+                    <div className="text-[10px] text-[#6B6D77] font-mono pt-1 border-t border-[#DEDEDA] dark:text-[#D0D0D0] dark:border-[#3D3D3D]">
+                      {focusedMapLocation.lat.toFixed(4)}° N, {focusedMapLocation.lng.toFixed(4)}° E
                     </div>
                   </div>
                 </Popup>
@@ -922,16 +935,16 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
               >
                 <Popup>
                   <div className="p-1.5 font-sans">
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-[#2C5C93] mb-0.5">
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-[#2C5C93] mb-0.5 dark:text-[#E0E0E0]">
                       <span className="w-2 h-2 rounded-full bg-[#1A3A6B] animate-ping"></span>
                       <span>{t('map_user_marker_title', 'You Are Here (Live GPS)')}</span>
                     </div>
-                    <div className="text-[11px] text-[#14151A] font-mono">
-                      {userLocation.lat.toFixed(5)}Â° N, {userLocation.lng.toFixed(5)}Â° E
+                    <div className="text-[11px] text-[#14151A] font-mono dark:text-[#FFFFFF]">
+                      {userLocation.lat.toFixed(5)}° N, {userLocation.lng.toFixed(5)}° E
                     </div>
                     {userLocation.accuracy && (
-                      <div className="text-[10px] text-[#5A5C66] mt-1 font-sans">
-                        {t('map_accuracy', 'Accuracy')}: Â±{userLocation.accuracy}m
+                      <div className="text-[10px] text-[#5A5C66] mt-1 font-sans dark:text-[#D0D0D0]">
+                        {t('map_accuracy', 'Accuracy')}: ±{userLocation.accuracy}m
                       </div>
                     )}
                   </div>
@@ -955,20 +968,20 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
 
         {/* FLOATING ACTIVE SAFE EVACUATION ROUTE HUD */}
         {activeLayers.evacRoute && activeEvacuationRoute && (
-          <div className="absolute top-4 left-4 bg-white border border-[#DCDCD8] p-3 rounded-xl shadow-lg z-20 max-w-xs pointer-events-auto animate-fade-in font-sans">
+          <div className="absolute top-4 left-4 bg-white border border-[#DCDCD8] p-3 rounded-xl shadow-lg z-20 max-w-xs pointer-events-auto animate-fade-in font-sans dark:bg-[#2F2F2F] dark:border-[#333333]">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-[#14151A] flex items-center gap-1.5">
-                <Compass className="w-4 h-4 text-[#12294D]" />
+              <span className="text-xs font-bold text-[#14151A] flex items-center gap-1.5 dark:text-[#FFFFFF]">
+                <Compass className="w-4 h-4 text-[#12294D] dark:text-[#FFFFFF]" />
                 Active Safe Evacuation Corridor
               </span>
-              <span className="text-[10px] font-bold font-data bg-[#F0F7F4] text-[#2A6B4A] px-1.5 py-0.5 rounded border border-[#CFE6D8]">
+              <span className="text-[10px] font-bold font-data bg-[#F0F7F4] text-[#2A6B4A] px-1.5 py-0.5 rounded border border-[#CFE6D8] dark:text-[#D0D0D0] dark:border-[#14532D]">
                 DRY
               </span>
             </div>
-            <div className="text-[11px] text-[#5A5C66] mt-1">
-              To: <strong className="text-[#14151A]">{activeEvacuationRoute.destinationName}</strong>
+            <div className="text-[11px] text-[#5A5C66] mt-1 dark:text-[#D0D0D0]">
+              To: <strong className="text-[#14151A] dark:text-[#FFFFFF]">{activeEvacuationRoute.destinationName}</strong>
             </div>
-            <div className="mt-1 flex items-center justify-between text-[11px] font-data text-[#5A5C66]">
+            <div className="mt-1 flex items-center justify-between text-[11px] font-data text-[#5A5C66] dark:text-[#D0D0D0]">
               <span>Distance: <strong>{activeEvacuationRoute.distanceKm} km</strong></span>
               <span>ETA: <strong>{activeEvacuationRoute.etaMinutes} mins</strong></span>
             </div>
@@ -976,15 +989,15 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
         )}
 
         {/* FLOATING MAP LEGEND HUD */}
-        <div className="absolute bottom-4 left-4 bg-white border border-[#E4E4E0] p-2.5 rounded-xl shadow-lg z-20 text-[11px] flex flex-col gap-1.5 pointer-events-auto max-w-[220px] font-sans">
-          <div className="font-bold text-[#14151A] text-[10px] uppercase tracking-wider">{t('map_legend_title', 'Inundation & Assets Legend')}</div>
+        <div className="absolute bottom-4 left-4 bg-white border border-[#E4E4E0] p-2.5 rounded-xl shadow-lg z-20 text-[11px] flex flex-col gap-1.5 pointer-events-auto max-w-[220px] font-sans dark:bg-[#2F2F2F] dark:border-[#3D3D3D]">
+          <div className="font-bold text-[#14151A] text-[10px] uppercase tracking-wider dark:text-[#FFFFFF]">{t('map_legend_title', 'Inundation & Assets Legend')}</div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-sm bg-[#B42318]/80 border border-[#B42318]"></span>
             <span>{t('map_legend_a', 'Zone A: Severe (>1.5m)')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-sm bg-[#B5824A]/80 border border-[#B5824A]"></span>
-            <span>{t('map_legend_b', 'Zone B: High (0.8mâ€“1.5m)')}</span>
+            <span>{t('map_legend_b', 'Zone B: High (0.8m–1.5m)')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-sm bg-[#12294D]/80 border border-[#12294D]"></span>
@@ -995,12 +1008,12 @@ export const ZoneMap: React.FC<{ fullScreen?: boolean; audience?: 'authority' | 
             <span>{t('map_legend_d', 'Zone D: Dry Safe Corridor')}</span>
           </div>
           <div className="h-px bg-[#E4E4E0] my-0.5" />
-          <div className="flex items-center gap-2 text-[10px] text-[#5A5C66]">
+          <div className="flex items-center gap-2 text-[10px] text-[#5A5C66] dark:text-[#D0D0D0]">
             <span className="w-2.5 h-2.5 rounded-full bg-[#12294D]"></span>
             <span>{t('map_legend_route', 'Safe Route Polyline')}</span>
           </div>
           {userLocation && (
-            <div className="flex items-center gap-2 text-[10px] text-[#2C5C93] font-semibold">
+            <div className="flex items-center gap-2 text-[10px] text-[#2C5C93] font-semibold dark:text-[#E0E0E0]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#1A3A6B] animate-ping"></span>
               <span>{t('map_legend_user', 'Current User GPS')}</span>
             </div>

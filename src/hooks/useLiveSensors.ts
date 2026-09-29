@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNexoraStore } from '../store/useNexoraStore';
 
-/** Refresh cadence for the 5 live metric readings. */
+/** Refresh cadence for the live metric readings. */
 export const LIVE_SENSOR_INTERVAL_MS = 5000;
 
 /**

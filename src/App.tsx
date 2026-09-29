@@ -16,6 +16,7 @@ const EvacuationPage = React.lazy(() => import('./pages/EvacuationPage').then(m 
 const ResourcesPage = React.lazy(() => import('./pages/ResourcesPage').then(m => ({ default: m.ResourcesPage })));
 const DamageDetectionPage = React.lazy(() => import('./pages/DamageDetectionPage').then(m => ({ default: m.DamageDetectionPage })));
 const CitizenPortalPage = React.lazy(() => import('./pages/CitizenPortalPage').then(m => ({ default: m.CitizenPortalPage })));
+const PredictPage = React.lazy(() => import('./pages/PredictPage').then(m => ({ default: m.PredictPage })));
 const CitizenMapPage = React.lazy(() => import('./pages/CitizenMapPage').then(m => ({ default: m.CitizenMapPage })));
 const CitizenShelterPage = React.lazy(() => import('./pages/CitizenShelterPage').then(m => ({ default: m.CitizenShelterPage })));
 const AnalyticsPage = React.lazy(() => import('./pages/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
@@ -32,9 +33,9 @@ const NexoraChatbot = React.lazy(() => import('./components/chat/NexoraChatbot')
 
 /** Skeleton fallback while lazy chunks load (Principle #4) */
 const PageSkeleton = () => (
-  <div className="min-h-screen bg-[#F8F8F7] flex flex-col">
+  <div className="min-h-screen bg-[#F8F8F7] flex flex-col dark:bg-[#262626]">
     {/* Top bar skeleton */}
-    <div className="h-16 bg-white border-b border-[#DEDEDA] sticky top-0 z-30">
+    <div className="h-16 bg-white border-b border-[#DEDEDA] sticky top-0 z-30 dark:bg-[#2F2F2F] dark:border-[#3D3D3D]">
       <div className="max-w-[1600px] mx-auto px-6 h-full flex items-center gap-4">
         <div className="skeleton w-10 h-10 rounded-xl" />
         <div className="skeleton w-28 h-5 rounded" />
@@ -44,7 +45,7 @@ const PageSkeleton = () => (
       </div>
     </div>
     {/* Nav tabs skeleton */}
-    <div className="h-10 bg-[#F1F1EF] border-b border-[#DEDEDA] px-6">
+    <div className="h-10 bg-[#F1F1EF] border-b border-[#DEDEDA] px-6 dark:bg-[#262626] dark:border-[#3D3D3D]">
       <div className="max-w-[1600px] mx-auto flex items-center gap-2 h-full">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="skeleton w-20 h-6 rounded-lg" />
@@ -139,6 +140,8 @@ export function App() {
         return <DamageDetectionPage />;
       case 'CITIZEN_PORTAL':
         return <CitizenPortalPage />;
+      case 'YOLO_PREDICT':
+        return <PredictPage />;
       case 'CITIZEN_MAP':
         return <CitizenMapPage />;
       case 'CITIZEN_SHELTERS':
@@ -158,7 +161,7 @@ export function App() {
   };
 
   return (
-    <div className="relative isolate min-h-screen text-[var(--color-text-primary,#14151A)] dark:text-[#EFEFF1] antialiased transition-colors duration-200">
+    <div className="relative isolate min-h-screen text-[var(--color-text-primary,#14151A)] dark:text-[#FFFFFF] antialiased transition-colors duration-200">
       {/* Branded environmental sensor-network background (behind all content) */}
       <MonitoringBackground />
 

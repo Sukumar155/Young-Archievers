@@ -100,17 +100,17 @@ export const USSDSimulator: React.FC = () => {
           <div className="w-16 h-1.5 bg-[#26272E] rounded-full mb-3" />
 
           {/* 2G LCD SCREEN (Monochrome Cyan/Green Backlit) */}
-          <div className="w-full h-56 bg-[#14251F] border-4 border-[#101116] rounded-lg p-3 font-data text-[#7E9AC4] text-xs flex flex-col justify-between shadow-inner relative overflow-hidden">
+          <div className="w-full h-56 bg-[#14251F] border-4 border-[#101116] rounded-lg p-3 font-data text-[#7E9AC4] text-xs flex flex-col justify-between shadow-inner relative overflow-hidden dark:text-[#E0E0E0]">
             {/* Status bar */}
-            <div className="flex items-center justify-between text-[10px] pb-1 border-b border-[#CFE6D8]/20 bg-[#7CC99A] text-[#14251F]">
+            <div className="flex items-center justify-between text-[10px] pb-1 border-b border-[#CFE6D8]/20 bg-[#7CC99A] text-[#14251F] dark:border-[#14532D]">
               <div className="flex items-center gap-1">
                 <Signal className="w-3 h-3 text-[#5BBF7A]" />
                 <span className="font-bold">2G BSNL</span>
               </div>
               <div className="flex items-center gap-1">
-                <Radio className="w-3 h-3 text-[#7E9AC4] animate-pulse" />
+                <Radio className="w-3 h-3 text-[#7E9AC4] animate-pulse dark:text-[#E0E0E0]" />
                 <span>USSD</span>
-                <BatteryCharging className="w-3 h-3 text-[#7E9AC4] ml-1" />
+                <BatteryCharging className="w-3 h-3 text-[#7E9AC4] ml-1 dark:text-[#E0E0E0]" />
               </div>
             </div>
 
@@ -118,7 +118,7 @@ export const USSDSimulator: React.FC = () => {
             <div className="flex-1 py-2 leading-tight overflow-y-auto whitespace-pre-wrap">
               {currentStep === 'IDLE' && (
                 <div className="flex flex-col justify-center items-center h-full text-center">
-                  <div className="text-[11px] bg-[#5BBF7A]/80 text-[#14251F] mb-1">NEXORA 2G GATEWAY</div>
+                  <div className="text-[11px] bg-[#5BBF7A]/80 text-[#14251F] dark:text-[#0F0F0F] mb-1">NEXORA 2G GATEWAY</div>
                   <div className="text-xl font-bold text-white tracking-widest bg-[#14251F]/60 px-3 py-1 rounded border border-[#126B34]/30">
                     {dialedCode || '_'}
                   </div>
@@ -130,7 +130,7 @@ export const USSDSimulator: React.FC = () => {
 
               {currentStep === 'MENU' && (
                 <div>
-                  <div className="font-bold text-white border-b border-[#CFE6D8]/30 pb-1 mb-1">
+                  <div className="font-bold text-white border-b border-[#CFE6D8]/30 pb-1 mb-1 dark:border-[#14532D]">
                     NEXORA DISASTER RELIEF
                   </div>
                   <div>1. Immediate Danger / SOS</div>
@@ -143,7 +143,7 @@ export const USSDSimulator: React.FC = () => {
 
               {currentStep === 'DANGER_COUNT' && (
                 <div>
-                  <div className="font-bold bg-[#D9A03A] text-[#241B0B] pb-1 border-b border-[#CFE6D8]/30">
+                  <div className="font-bold bg-[#D9A03A] text-[#241B0B] pb-1 border-b border-[#CFE6D8]/30 dark:border-[#14532D]">
                     ! EMERGENCY SOS REPORT !
                   </div>
                   <div className="mt-1">How many people trapped?</div>
@@ -154,7 +154,7 @@ export const USSDSimulator: React.FC = () => {
 
               {currentStep === 'STRANDED_TYPE' && (
                 <div>
-                  <div className="font-bold text-white pb-1 border-b border-[#CFE6D8]/30">
+                  <div className="font-bold text-white pb-1 border-b border-[#CFE6D8]/30 dark:border-[#14532D]">
                     EVACUATION LOCATION
                   </div>
                   <div className="mt-1">1. Rooftop / High tree</div>
@@ -166,31 +166,31 @@ export const USSDSimulator: React.FC = () => {
 
               {currentStep === 'CONFIRMATION' && (
                 <div>
-                  <div className="font-bold bg-[#7CC99A] text-[#14251F] pb-1 border-b border-[#CFE6D8]/30">
+                  <div className="font-bold bg-[#7CC99A] text-[#14251F] pb-1 border-b border-[#CFE6D8]/30 dark:border-[#14532D]">
                     ✓ SOS DISPATCHED
                   </div>
                   <div className="mt-1 text-white">Ticket: #{ticketNumber}</div>
                   <div className="mt-1">NDRF Column Alpha alerted. Stay on high ground. Keep phone on.</div>
-                  <div className="mt-2 text-[10px] text-[#7E9AC4]">Press [END] to close session.</div>
+                  <div className="mt-2 text-[10px] text-[#7E9AC4] dark:text-[#E0E0E0]">Press [END] to close session.</div>
                 </div>
               )}
 
               {currentStep === 'SHELTER_LOC' && (
                 <div>
-                  <div className="font-bold text-white pb-1 border-b border-[#CFE6D8]/30">
+                  <div className="font-bold text-white pb-1 border-b border-[#CFE6D8]/30 dark:border-[#14532D]">
                     NEAREST RELIEF CAMP
                   </div>
                   <div className="mt-1 text-white">Pragati High School</div>
                   <div>Distance: 1.4 km SW</div>
                   <div>Available: 128 beds</div>
                   <div>Rations: Food + Meds OK</div>
-                  <div className="mt-2 text-[10px] text-[#7E9AC4]">SMS landmark guide sent to your number.</div>
+                  <div className="mt-2 text-[10px] text-[#7E9AC4] dark:text-[#E0E0E0]">SMS landmark guide sent to your number.</div>
                 </div>
               )}
 
               {currentStep === 'WEATHER' && (
                 <div>
-                  <div className="font-bold text-white pb-1 border-b border-[#CFE6D8]/30">
+                  <div className="font-bold text-white pb-1 border-b border-[#CFE6D8]/30 dark:border-[#14532D]">
                     RIVER BASIN ALERT
                   </div>
                   <div className="mt-1">Water Lvl: {riverLevelMeters}m (Danger: 49.68m)</div>
@@ -201,7 +201,7 @@ export const USSDSimulator: React.FC = () => {
             </div>
 
             {/* Screen footer softkeys */}
-            <div className="flex justify-between text-[9px] pt-1 border-t border-[#CFE6D8]/20 bg-[#7CC99A] text-[#14251F]">
+            <div className="flex justify-between text-[9px] pt-1 border-t border-[#CFE6D8]/20 bg-[#7CC99A] text-[#14251F] dark:border-[#14532D]">
               <span>{currentStep === 'IDLE' ? 'Options' : 'Back'}</span>
               <span className="font-bold text-white uppercase tracking-wider">
                 {currentStep === 'IDLE' ? 'Dial' : 'Send'}
@@ -260,7 +260,7 @@ export const USSDSimulator: React.FC = () => {
                 className="h-11 bg-[#1C1D22] hover:bg-[#26272E] active:bg-[#14151A] border border-[#35363F] text-white rounded-xl flex flex-col items-center justify-center shadow transition-all cursor-pointer"
               >
                 <span className="text-base font-bold leading-none">{btn.key}</span>
-                {btn.sub && <span className="text-[8px] text-[#6B6D77] font-sans tracking-widest leading-none mt-0.5">{btn.sub}</span>}
+                {btn.sub && <span className="text-[8px] text-[#6B6D77] font-sans tracking-widest leading-none mt-0.5 dark:text-[#D0D0D0]">{btn.sub}</span>}
               </button>
             ))}
           </div>

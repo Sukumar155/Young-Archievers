@@ -102,20 +102,20 @@ export const FieldResponderApp: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto min-h-[740px] bg-white dark:bg-[#17181C] border border-[#E4E4E0] dark:border-[#2E3038] rounded-[32px] shadow-xl overflow-hidden flex flex-col relative text-[#14151A] dark:text-[#F1F1EF]">
+    <div className="w-full max-w-md mx-auto min-h-[740px] bg-white dark:bg-[#212121] border border-[#E4E4E0] dark:border-[#B4B4B4] rounded-[32px] shadow-xl overflow-hidden flex flex-col relative text-[#14151A] dark:text-[#FFFFFF]">
       
       {/* MOBILE HEADER - MIDNIGHT NAVY ACCENTS & CLEAN */}
-      <div className="bg-[#F8F8F7] dark:bg-[#1C1D22] border-b border-[#E4E4E0] dark:border-[#2E3038] p-4 pt-5 pb-3 sticky top-0 z-30">
+      <div className="bg-[#F8F8F7] dark:bg-[#2F2F2F] border-b border-[#E4E4E0] dark:border-[#B4B4B4] p-4 pt-5 pb-3 sticky top-0 z-30">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white dark:bg-[#0D0E12] border border-[#E4E4E0] dark:border-[#2E3038] flex items-center justify-center shadow-xs">
-              <Shield className="w-4 h-4 text-[#14151A] dark:text-[#9DB8DC]" />
+            <div className="w-9 h-9 rounded-xl bg-white dark:bg-[#171717] border border-[#E4E4E0] dark:border-[#B4B4B4] flex items-center justify-center shadow-xs">
+              <Shield className="w-4 h-4 text-[#14151A] dark:text-[#D0D0D0]" />
             </div>
             <div>
-              <div className="font-heading font-bold text-sm leading-tight text-[#14151A] dark:text-[#F1F1EF]">
+              <div className="font-heading font-bold text-sm leading-tight text-[#14151A] dark:text-[#FFFFFF]">
                 {t('responder_title', 'NEXORA FIELD OPS')}
               </div>
-              <div className="text-[11px] text-[#5A5C66] dark:text-[#A1A3AC] font-data mt-0.5">{assignedTeam.name}</div>
+              <div className="text-[11px] text-[#5A5C66] dark:text-[#D0D0D0] font-data mt-0.5">{assignedTeam.name}</div>
             </div>
           </div>
 
@@ -123,7 +123,7 @@ export const FieldResponderApp: React.FC = () => {
           <button
             data-testid="responder-offline-toggle"
             onClick={toggleOfflineMode}
-            className={`min-h-[44px] px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs ${ isOffline ? 'bg-[#8A4D06] text-white' : 'bg-white dark:bg-[#0D0E12] text-[#126B34] dark:text-[#5BBF7A] border border-[#CFE6D8] dark:border-[#234133]/60' }`}
+            className={`min-h-[44px] px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs ${ isOffline ? 'bg-[#8A4D06] text-white' : 'bg-white dark:bg-[#171717] text-[#126B34] dark:text-[#D0D0D0] border border-[#CFE6D8] dark:border-[#14532D]/60' }`}
             title="Click to toggle network connectivity simulation"
           >
             {isOffline ? <WifiOff className="w-3.5 h-3.5" /> : <Wifi className="w-3.5 h-3.5" />}
@@ -132,10 +132,10 @@ export const FieldResponderApp: React.FC = () => {
         </div>
 
         {/* OFFLINE STATUS & QUEUE STRIP */}
-        <div className="flex items-center justify-between bg-white dark:bg-[#0D0E12] border border-[#E4E4E0] dark:border-[#2E3038] rounded-xl px-3 py-2 mt-2 text-xs">
+        <div className="flex items-center justify-between bg-white dark:bg-[#171717] border border-[#E4E4E0] dark:border-[#B4B4B4] rounded-xl px-3 py-2 mt-2 text-xs">
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${isOffline ? 'bg-[#8A4D06] animate-pulse' : 'bg-[#126B34]'}`} />
-            <span className="font-semibold text-xs text-[#14151A] dark:text-[#F1F1EF]">
+            <span className="font-semibold text-xs text-[#14151A] dark:text-[#FFFFFF]">
               {isOffline ? 'Offline Mesh Active' : 'Connected to SEOC'}
             </span>
           </div>
@@ -149,14 +149,14 @@ export const FieldResponderApp: React.FC = () => {
                   isOffline
                     ? 'bg-[#FBF7EC] text-[#7A3E0B] border border-[#F7E9D6] cursor-not-allowed'
                     : 'bg-[#12294D] hover:bg-[#0F2140] text-white cursor-pointer'
-                }`}
+                } dark:text-[#E0E0E0] dark:bg-[#3A2A0A] dark:border-[#78350F] `}
                 title={isOffline ? 'Cannot sync while offline' : 'Sync now'}
               >
                 <RefreshCw className="w-2.5 h-2.5" />
                 <span>{queuedSyncCount} {t('pending_sync', 'pending')}</span>
               </button>
             ) : (
-              <span className="text-[10px] text-[#5A5C66] font-data">
+              <span className="text-[10px] text-[#5A5C66] font-data dark:text-[#D0D0D0]">
                 Synced {lastSyncTime}
               </span>
             )}
@@ -165,8 +165,8 @@ export const FieldResponderApp: React.FC = () => {
 
         {/* Dynamic Action Notification Toast */}
         {actionNotice && (
-          <div className="mt-2 p-2 bg-[#EFEFEC] border border-[#DCDCD8] text-[#12294D] rounded-xl text-xs font-semibold text-center animate-fade-in flex items-center justify-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#126B34]" />
+          <div className="mt-2 p-2 bg-[#EFEFEC] border border-[#DCDCD8] text-[#12294D] rounded-xl text-xs font-semibold text-center animate-fade-in flex items-center justify-center gap-1.5 dark:text-[#FFFFFF] dark:bg-[#262626] dark:border-[#333333]">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#126B34] dark:text-[#D0D0D0]" />
             <span>{actionNotice}</span>
           </div>
         )}
@@ -180,27 +180,27 @@ export const FieldResponderApp: React.FC = () => {
             
             {/* CURRENT MISSION STATUS HEADER */}
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#5A5C66]">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#5A5C66] dark:text-[#D0D0D0]">
                 {t('responder_active_mission', 'Active Incident Order')}
               </span>
-              <span className="font-data text-xs font-bold px-2.5 py-1 rounded-full bg-[#EFEFEC] text-[#12294D] border border-[#DCDCD8]">
+              <span className="font-data text-xs font-bold px-2.5 py-1 rounded-full bg-[#EFEFEC] text-[#12294D] border border-[#DCDCD8] dark:text-[#FFFFFF] dark:bg-[#262626] dark:border-[#333333]">
                 {responderMissionStatus}
               </span>
             </div>
 
             {/* ASSIGNMENT CARD */}
-            <div className="p-4 rounded-xl bg-[#F8F8F7] border border-[#E4E4E0] space-y-3.5 shadow-xs">
+            <div className="p-4 rounded-xl bg-[#F8F8F7] border border-[#E4E4E0] space-y-3.5 shadow-xs dark:bg-[#262626] dark:border-[#3D3D3D]">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <span className="font-data text-xs font-bold text-[#12294D] bg-white border border-[#E4E4E0] px-2 py-0.5 rounded">
+                  <span className="font-data text-xs font-bold text-[#12294D] bg-white border border-[#E4E4E0] px-2 py-0.5 rounded dark:text-[#FFFFFF] dark:bg-[#2F2F2F] dark:border-[#3D3D3D]">
                     {activeMission.id}
                   </span>
-                  <h3 className="font-heading font-bold text-base text-[#14151A] mt-1.5">
+                  <h3 className="font-heading font-bold text-base text-[#14151A] mt-1.5 dark:text-[#FFFFFF]">
                     {activeMission.locationName}
                   </h3>
-                  <div className="flex items-center gap-1 text-[11px] text-[#5A5C66] font-data mt-0.5">
-                    <MapPin className="w-3 h-3 text-[#12294D]" />
-                    <span>26.1754Â° N, 91.6842Â° E</span>
+                  <div className="flex items-center gap-1 text-[11px] text-[#5A5C66] font-data mt-0.5 dark:text-[#D0D0D0]">
+                    <MapPin className="w-3 h-3 text-[#12294D] dark:text-[#FFFFFF]" />
+                    <span>26.1754° N, 91.6842° E</span>
                   </div>
                 </div>
                 <RiskBadge level={activeMission.priorityLevel} />
@@ -208,14 +208,14 @@ export const FieldResponderApp: React.FC = () => {
 
               {/* VULNERABILITY FLAGS */}
               <div>
-                <div className="text-[11px] font-bold text-[#5A5C66] uppercase tracking-wider mb-1.5">
+                <div className="text-[11px] font-bold text-[#5A5C66] uppercase tracking-wider mb-1.5 dark:text-[#D0D0D0]">
                   {t('responder_vulnerability', 'Vulnerability Needs:')}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {activeMission.needs.map(n => (
                     <span
                       key={n}
-                      className="px-2 py-0.5 rounded-md bg-white text-[#14151A] border border-[#E4E4E0] text-[11px] font-semibold"
+                      className="px-2 py-0.5 rounded-md bg-white text-[#14151A] border border-[#E4E4E0] text-[11px] font-semibold dark:text-[#FFFFFF] dark:bg-[#2F2F2F] dark:border-[#3D3D3D]"
                     >
                       {n}
                     </span>
@@ -224,12 +224,12 @@ export const FieldResponderApp: React.FC = () => {
               </div>
 
               {/* SURVIVOR HEADCOUNT */}
-              <div className="p-3 bg-white border border-[#E4E4E0] rounded-xl flex items-center justify-between text-xs">
+              <div className="p-3 bg-white border border-[#E4E4E0] rounded-xl flex items-center justify-between text-xs dark:bg-[#2F2F2F] dark:border-[#3D3D3D]">
                 <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#12294D]" />
-                  <span className="font-semibold text-[#14151A]">{t('responder_trapped_count', 'Trapped Headcount')}</span>
+                  <Users className="w-4 h-4 text-[#12294D] dark:text-[#FFFFFF]" />
+                  <span className="font-semibold text-[#14151A] dark:text-[#FFFFFF]">{t('responder_trapped_count', 'Trapped Headcount')}</span>
                 </div>
-                <span className="font-data font-bold text-base text-[#B42318]">
+                <span className="font-data font-bold text-base text-[#B42318] dark:text-[#FFFFFF]">
                   {activeMission.peopleCount} Citizens
                 </span>
               </div>
@@ -237,43 +237,43 @@ export const FieldResponderApp: React.FC = () => {
               {/* OFFLINE NAVIGATION BUTTON >= 44px */}
               <button
                 onClick={() => flashNotice("Offline turn-by-turn guidance loaded via dry corridor")}
-                className="w-full min-h-[44px] py-2.5 px-4 bg-white hover:bg-[#F8F8F7] border border-[#12294D] text-[#12294D] text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-2xs transition-all"
+                className="w-full min-h-[44px] py-2.5 px-4 bg-white hover:bg-[#F8F8F7] border border-[#12294D] text-[#12294D] text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-2xs transition-all dark:text-[#FFFFFF] dark:bg-[#2F2F2F]"
               >
-                <Compass className="w-4 h-4 text-[#12294D]" />
+                <Compass className="w-4 h-4 text-[#12294D] dark:text-[#FFFFFF]" />
                 <span>{t('responder_nav_offline', 'Launch Offline Route Guidance')}</span>
               </button>
             </div>
 
             {/* MISSION CHECKPOINTS */}
-            <div className="bg-[#F8F8F7] border border-[#E4E4E0] rounded-xl p-4 space-y-3 shadow-xs">
-              <div className="text-xs font-bold uppercase tracking-wider text-[#14151A]">
+            <div className="bg-[#F8F8F7] border border-[#E4E4E0] rounded-xl p-4 space-y-3 shadow-xs dark:bg-[#262626] dark:border-[#3D3D3D]">
+              <div className="text-xs font-bold uppercase tracking-wider text-[#14151A] dark:text-[#FFFFFF]">
                 {t('responder_checkpoints', 'Mission Checkpoints')}
               </div>
 
               <div className="space-y-2">
                 <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
                   responderMissionStatus !== 'ASSIGNED' ? 'bg-[#F1F8F3] border-[#CFE6D8] text-[#126B34]' : 'bg-white border-[#E4E4E0]'
-                }`}>
+                } dark:text-[#D0D0D0] dark:bg-[#0A2E22] dark:bg-[#2F2F2F] dark:border-[#14532D] dark:border-[#3D3D3D] `}>
                   <span className="font-medium">1. Acknowledge & Deploy</span>
-                  {responderMissionStatus !== 'ASSIGNED' && <CheckCircle2 className="w-4 h-4 text-[#126B34]" />}
+                  {responderMissionStatus !== 'ASSIGNED' && <CheckCircle2 className="w-4 h-4 text-[#126B34] dark:text-[#D0D0D0]" />}
                 </div>
 
                 <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
                   responderMissionStatus === 'ON_SCENE' || responderMissionStatus === 'EVACUATING' || responderMissionStatus === 'COMPLETED'
                     ? 'bg-[#F1F8F3] border-[#CFE6D8] text-[#126B34]'
                     : 'bg-white border-[#E4E4E0]'
-                }`}>
+                } dark:text-[#D0D0D0] dark:bg-[#0A2E22] dark:bg-[#2F2F2F] dark:border-[#14532D] dark:border-[#3D3D3D] `}>
                   <span className="font-medium">2. On-Scene Arrival</span>
                   {(responderMissionStatus === 'ON_SCENE' || responderMissionStatus === 'EVACUATING' || responderMissionStatus === 'COMPLETED') && (
-                    <CheckCircle2 className="w-4 h-4 text-[#126B34]" />
+                    <CheckCircle2 className="w-4 h-4 text-[#126B34] dark:text-[#D0D0D0]" />
                   )}
                 </div>
 
                 <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
                   responderMissionStatus === 'COMPLETED' ? 'bg-[#F1F8F3] border-[#CFE6D8] text-[#126B34]' : 'bg-white border-[#E4E4E0]'
-                }`}>
+                } dark:text-[#D0D0D0] dark:bg-[#0A2E22] dark:bg-[#2F2F2F] dark:border-[#14532D] dark:border-[#3D3D3D] `}>
                   <span className="font-medium">3. Shelter Transfer & QR Scan</span>
-                  {responderMissionStatus === 'COMPLETED' && <CheckCircle2 className="w-4 h-4 text-[#126B34]" />}
+                  {responderMissionStatus === 'COMPLETED' && <CheckCircle2 className="w-4 h-4 text-[#126B34] dark:text-[#D0D0D0]" />}
                 </div>
               </div>
 
@@ -285,13 +285,13 @@ export const FieldResponderApp: React.FC = () => {
                 >
                   {responderMissionStatus === 'ASSIGNED' && t('responder_step_assigned', 'Confirm En-Route to Scene')}
                   {responderMissionStatus === 'EN_ROUTE' && t('responder_step_en_route', 'Mark Arrived On-Scene')}
-                  {responderMissionStatus === 'ON_SCENE' && t('responder_step_on_scene', 'Intake Complete â€” Begin Evac')}
+                  {responderMissionStatus === 'ON_SCENE' && t('responder_step_on_scene', 'Intake Complete — Begin Evac')}
                   {responderMissionStatus === 'EVACUATING' && t('responder_step_evacuating', 'Deliver to Shelter (Scan QR)')}
                   <ArrowRight className="w-4 h-4 text-white" />
                 </button>
               ) : (
-                <div className="p-3 bg-[#F1F8F3] text-[#126B34] text-xs font-bold rounded-xl text-center border border-[#CFE6D8]">
-                  âœ“ Mission Complete â€” Standing by for next dispatch
+                <div className="p-3 bg-[#F1F8F3] text-[#126B34] text-xs font-bold rounded-xl text-center border border-[#CFE6D8] dark:text-[#D0D0D0] dark:bg-[#0A2E22] dark:border-[#14532D]">
+                  ✓ Mission Complete — Standing by for next dispatch
                 </div>
               )}
             </div>
@@ -300,24 +300,24 @@ export const FieldResponderApp: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setShowDamageModal(true)}
-                className="min-h-[48px] p-3 rounded-xl bg-white border border-[#E4E4E0] hover:border-[#8A4D06] text-left cursor-pointer shadow-2xs transition-all flex flex-col justify-between group"
+                className="min-h-[48px] p-3 rounded-xl bg-white border border-[#E4E4E0] hover:border-[#8A4D06] text-left cursor-pointer shadow-2xs transition-all flex flex-col justify-between group dark:bg-[#2F2F2F] dark:border-[#3D3D3D]"
               >
-                <div className="w-8 h-8 rounded-xl bg-[#FBF7EC] text-[#8A4D06] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+                <div className="w-8 h-8 rounded-xl bg-[#FBF7EC] text-[#8A4D06] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform dark:text-[#E0E0E0] dark:bg-[#3A2A0A]">
                   <AlertOctagon className="w-4 h-4" />
                 </div>
-                <div className="font-heading font-bold text-xs text-[#14151A]">{t('responder_report_damage', 'Report Obstruction')}</div>
-                <div className="text-[10px] text-[#5A5C66] mt-0.5">Route flood / blocked bridge</div>
+                <div className="font-heading font-bold text-xs text-[#14151A] dark:text-[#FFFFFF]">{t('responder_report_damage', 'Report Obstruction')}</div>
+                <div className="text-[10px] text-[#5A5C66] mt-0.5 dark:text-[#D0D0D0]">Route flood / blocked bridge</div>
               </button>
 
               <button
                 onClick={() => setShowResourceModal(true)}
-                className="min-h-[48px] p-3 rounded-xl bg-white border border-[#E4E4E0] hover:border-[#4A4038] text-left cursor-pointer shadow-2xs transition-all flex flex-col justify-between group"
+                className="min-h-[48px] p-3 rounded-xl bg-white border border-[#E4E4E0] hover:border-[#4A4038] text-left cursor-pointer shadow-2xs transition-all flex flex-col justify-between group dark:bg-[#2F2F2F] dark:border-[#3D3D3D]"
               >
-                <div className="w-8 h-8 rounded-xl bg-[#F8F8F7] text-[#4A4038] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+                <div className="w-8 h-8 rounded-xl bg-[#F8F8F7] text-[#4A4038] dark:text-[#D0D0D0] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform dark:bg-[#262626]">
                   <Truck className="w-4 h-4" />
                 </div>
-                <div className="font-heading font-bold text-xs text-[#14151A]">{t('responder_request_resources', 'Request Backup')}</div>
-                <div className="text-[10px] text-[#5A5C66] mt-0.5">Boats, life jackets, fuel</div>
+                <div className="font-heading font-bold text-xs text-[#14151A] dark:text-[#FFFFFF]">{t('responder_request_resources', 'Request Backup')}</div>
+                <div className="text-[10px] text-[#5A5C66] mt-0.5 dark:text-[#D0D0D0]">Boats, life jackets, fuel</div>
               </button>
             </div>
 
@@ -326,46 +326,46 @@ export const FieldResponderApp: React.FC = () => {
 
         {activeTab === 'MAP' && (
           <div className="space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-[#5A5C66]">
+            <div className="text-xs font-bold uppercase tracking-wider text-[#5A5C66] dark:text-[#D0D0D0]">
               Tactical Offline Cache
             </div>
-            <div className="h-64 bg-[#EFEFEC] rounded-xl border border-[#DCDCD8] relative overflow-hidden flex items-center justify-center">
+            <div className="h-64 bg-[#EFEFEC] rounded-xl border border-[#DCDCD8] relative overflow-hidden flex items-center justify-center dark:bg-[#262626] dark:border-[#333333]">
               <div className="text-center p-4">
-                <Compass className="w-8 h-8 text-[#12294D] mx-auto mb-2 animate-spin-slow" />
-                <div className="text-xs font-bold text-[#14151A]">Vector Offline Tiles Cached (15km)</div>
-                <div className="text-[11px] text-[#5A5C66] mt-1">Pandu Ghat Staging to Maligaon Safe Ridge</div>
+                <Compass className="w-8 h-8 text-[#12294D] mx-auto mb-2 animate-spin-slow dark:text-[#FFFFFF]" />
+                <div className="text-xs font-bold text-[#14151A] dark:text-[#FFFFFF]">Vector Offline Tiles Cached (15km)</div>
+                <div className="text-[11px] text-[#5A5C66] mt-1 dark:text-[#D0D0D0]">Pandu Ghat Staging to Maligaon Safe Ridge</div>
               </div>
             </div>
-            <div className="p-3.5 rounded-xl bg-[#F8F8F7] border border-[#E4E4E0] text-xs space-y-1">
-              <div className="font-bold text-[#14151A]">Nearest Evacuation Corridor:</div>
-              <div className="text-[#14151A]">Pandu Port Rd &rarr; Kamakhya Gate Link &rarr; Pragati High School</div>
-              <div className="text-[11px] text-[#8A4D06] font-bold mt-1">âš  Avoid Bharalumukh Sluice (1.4m water)</div>
+            <div className="p-3.5 rounded-xl bg-[#F8F8F7] border border-[#E4E4E0] text-xs space-y-1 dark:bg-[#262626] dark:border-[#3D3D3D]">
+              <div className="font-bold text-[#14151A] dark:text-[#FFFFFF]">Nearest Evacuation Corridor:</div>
+              <div className="text-[#14151A] dark:text-[#FFFFFF]">Pandu Port Rd &rarr; Kamakhya Gate Link &rarr; Pragati High School</div>
+              <div className="text-[11px] text-[#8A4D06] font-bold mt-1 dark:text-[#E0E0E0]">⚠ Avoid Bharalumukh Sluice (1.4m water)</div>
             </div>
           </div>
         )}
 
         {activeTab === 'SHELTERS' && (
           <div className="space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-[#5A5C66]">
+            <div className="text-xs font-bold uppercase tracking-wider text-[#5A5C66] dark:text-[#D0D0D0]">
               Available Relief Camps
             </div>
             {shelters.map(s => (
-              <div key={s.id} className="p-3.5 bg-[#F8F8F7] border border-[#E4E4E0] rounded-xl space-y-2">
+              <div key={s.id} className="p-3.5 bg-[#F8F8F7] border border-[#E4E4E0] rounded-xl space-y-2 dark:bg-[#262626] dark:border-[#3D3D3D]">
                 <div className="flex items-center justify-between">
-                  <span className="font-heading font-bold text-sm text-[#14151A]">{s.name}</span>
-                  <span className="text-[11px] font-data font-bold text-[#126B34] bg-[#F1F8F3] border border-[#CFE6D8] px-2 py-0.5 rounded">
+                  <span className="font-heading font-bold text-sm text-[#14151A] dark:text-[#FFFFFF]">{s.name}</span>
+                  <span className="text-[11px] font-data font-bold text-[#126B34] bg-[#F1F8F3] border border-[#CFE6D8] px-2 py-0.5 rounded dark:text-[#D0D0D0] dark:bg-[#0A2E22] dark:border-[#14532D]">
                     {s.totalCapacity - s.currentOccupancy} Free
                   </span>
                 </div>
-                <div className="text-xs text-[#5A5C66]">{s.address}</div>
-                <div className="pt-2 border-t border-[#E4E4E0] flex items-center justify-between text-[11px]">
-                  <span className="text-[#14151A]">Food Rations: {s.resources.foodPackets} pkts</span>
+                <div className="text-xs text-[#5A5C66] dark:text-[#D0D0D0]">{s.address}</div>
+                <div className="pt-2 border-t border-[#E4E4E0] flex items-center justify-between text-[11px] dark:border-[#3D3D3D]">
+                  <span className="text-[#14151A] dark:text-[#FFFFFF]">Food Rations: {s.resources.foodPackets} pkts</span>
                   <button
                     onClick={() => {
                       setSelectedShelterId(s.id);
                       setShowQRModal(true);
                     }}
-                    className="min-h-[44px] px-3 py-1.5 bg-white hover:bg-[#EFEFEC] text-[#12294D] font-bold rounded-lg border border-[#DCDCD8] cursor-pointer"
+                    className="min-h-[44px] px-3 py-1.5 bg-white hover:bg-[#EFEFEC] text-[#12294D] font-bold rounded-lg border border-[#DCDCD8] cursor-pointer dark:text-[#FFFFFF] dark:bg-[#2F2F2F] dark:border-[#333333]"
                   >
                     Check-in Here
                   </button>
@@ -377,22 +377,22 @@ export const FieldResponderApp: React.FC = () => {
 
         {activeTab === 'PROFILE' && (
           <div className="space-y-4">
-            <div className="p-5 bg-[#F8F8F7] border border-[#E4E4E0] rounded-xl space-y-3 text-center">
+            <div className="p-5 bg-[#F8F8F7] border border-[#E4E4E0] rounded-xl space-y-3 text-center dark:bg-[#262626] dark:border-[#3D3D3D]">
               <div className="w-16 h-16 rounded-full bg-[#14151A] text-white text-xl font-bold flex items-center justify-center mx-auto shadow-sm">
                 1A
               </div>
               <div>
-                <h3 className="font-heading font-bold text-base text-[#14151A]">Commander D. Gogoi</h3>
-                <p className="text-xs text-[#5A5C66]">NDRF 1st Battalion â€” Inflatable Boat Column</p>
+                <h3 className="font-heading font-bold text-base text-[#14151A] dark:text-[#FFFFFF]">Commander D. Gogoi</h3>
+                <p className="text-xs text-[#5A5C66] dark:text-[#D0D0D0]">NDRF 1st Battalion — Inflatable Boat Column</p>
               </div>
-              <div className="pt-3 border-t border-[#E4E4E0] grid grid-cols-2 gap-2 text-xs font-data">
-                <div className="bg-white border border-[#E4E4E0] p-2.5 rounded-xl">
-                  <div className="text-[#5A5C66] text-[10px]">RESCUED TODAY</div>
-                  <div className="font-bold text-lg text-[#14151A]">28</div>
+              <div className="pt-3 border-t border-[#E4E4E0] grid grid-cols-2 gap-2 text-xs font-data dark:border-[#3D3D3D]">
+                <div className="bg-white border border-[#E4E4E0] p-2.5 rounded-xl dark:bg-[#2F2F2F] dark:border-[#3D3D3D]">
+                  <div className="text-[#5A5C66] text-[10px] dark:text-[#D0D0D0]">RESCUED TODAY</div>
+                  <div className="font-bold text-lg text-[#14151A] dark:text-[#FFFFFF]">28</div>
                 </div>
-                <div className="bg-white border border-[#E4E4E0] p-2.5 rounded-xl">
-                  <div className="text-[#5A5C66] text-[10px]">SYNC STATUS</div>
-                  <div className="font-bold text-lg text-[#126B34]">100% OK</div>
+                <div className="bg-white border border-[#E4E4E0] p-2.5 rounded-xl dark:bg-[#2F2F2F] dark:border-[#3D3D3D]">
+                  <div className="text-[#5A5C66] text-[10px] dark:text-[#D0D0D0]">SYNC STATUS</div>
+                  <div className="font-bold text-lg text-[#126B34] dark:text-[#D0D0D0]">100% OK</div>
                 </div>
               </div>
             </div>
@@ -404,27 +404,27 @@ export const FieldResponderApp: React.FC = () => {
       {/* MODAL 1: QR SCAN / CHECK-IN CONFIRMATION */}
       {showQRModal && (
         <div className="absolute inset-0 z-50 bg-[#14151A]/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl p-5 w-full max-w-sm space-y-4 shadow-xl border border-[#E4E4E0]">
+          <div className="bg-white rounded-xl p-5 w-full max-w-sm space-y-4 shadow-xl border border-[#E4E4E0] dark:bg-[#2F2F2F] dark:border-[#3D3D3D]">
             <div className="flex items-center justify-between">
-              <h4 className="font-heading font-bold text-base text-[#14151A] flex items-center gap-1.5">
-                <QrCode className="w-5 h-5 text-[#12294D]" />
+              <h4 className="font-heading font-bold text-base text-[#14151A] flex items-center gap-1.5 dark:text-[#FFFFFF]">
+                <QrCode className="w-5 h-5 text-[#12294D] dark:text-[#FFFFFF]" />
                 Shelter Intake QR Scan
               </h4>
               <button
                 onClick={() => setShowQRModal(false)}
-                className="text-[#5A5C66] hover:text-[#14151A] cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="text-[#5A5C66] hover:text-[#14151A] cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center dark:text-[#D0D0D0]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-[#14151A]">
+            <p className="text-xs text-[#14151A] dark:text-[#FFFFFF]">
               Handing over evacuees to{' '}
-              <strong className="text-[#14151A]">{shelters.find(s => s.id === selectedShelterId)?.name}</strong>.
+              <strong className="text-[#14151A] dark:text-[#FFFFFF]">{shelters.find(s => s.id === selectedShelterId)?.name}</strong>.
             </p>
 
             <div>
-              <label className="text-xs font-bold text-[#14151A] block mb-1">
+              <label className="text-xs font-bold text-[#14151A] block mb-1 dark:text-[#FFFFFF]">
                 Confirm Citizen Headcount Arrived:
               </label>
               <div className="flex items-center gap-3">
@@ -434,16 +434,16 @@ export const FieldResponderApp: React.FC = () => {
                   max="30"
                   value={rescuedCount}
                   onChange={(e) => setRescuedCount(Number(e.target.value))}
-                  className="w-20 p-2.5 border border-[#E4E4E0] rounded-xl font-data font-bold text-base text-center bg-[#F8F8F7] text-[#14151A]"
+                  className="w-20 p-2.5 border border-[#E4E4E0] rounded-xl font-data font-bold text-base text-center bg-[#F8F8F7] text-[#14151A] dark:text-[#FFFFFF] dark:bg-[#262626] dark:border-[#3D3D3D]"
                 />
-                <span className="text-xs text-[#5A5C66]">citizens verified on board</span>
+                <span className="text-xs text-[#5A5C66] dark:text-[#D0D0D0]">citizens verified on board</span>
               </div>
             </div>
 
             <div className="pt-2 flex gap-2">
               <button
                 onClick={() => setShowQRModal(false)}
-                className="flex-1 min-h-[44px] py-2.5 text-xs font-semibold rounded-xl border border-[#E4E4E0] hover:bg-[#F8F8F7] cursor-pointer text-[#14151A]"
+                className="flex-1 min-h-[44px] py-2.5 text-xs font-semibold rounded-xl border border-[#E4E4E0] hover:bg-[#F8F8F7] cursor-pointer text-[#14151A] dark:text-[#FFFFFF] dark:border-[#3D3D3D]"
               >
                 Cancel
               </button>
@@ -461,34 +461,34 @@ export const FieldResponderApp: React.FC = () => {
       {/* MODAL 2: REPORT DAMAGE / ROAD OBSTRUCTION */}
       {showDamageModal && (
         <div className="absolute inset-0 z-50 bg-[#14151A]/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <form onSubmit={handleReportDamage} className="bg-white rounded-xl p-5 w-full max-w-sm space-y-4 shadow-xl border border-[#E4E4E0]">
+          <form onSubmit={handleReportDamage} className="bg-white rounded-xl p-5 w-full max-w-sm space-y-4 shadow-xl border border-[#E4E4E0] dark:bg-[#2F2F2F] dark:border-[#3D3D3D]">
             <div className="flex items-center justify-between">
-              <h4 className="font-heading font-bold text-base text-[#14151A] flex items-center gap-1.5">
-                <AlertOctagon className="w-5 h-5 text-[#8A4D06]" />
+              <h4 className="font-heading font-bold text-base text-[#14151A] flex items-center gap-1.5 dark:text-[#FFFFFF]">
+                <AlertOctagon className="w-5 h-5 text-[#8A4D06] dark:text-[#E0E0E0]" />
                 {t('responder_report_damage', 'Report Obstruction')}
               </h4>
               <button
                 type="button"
                 onClick={() => setShowDamageModal(false)}
-                className="text-[#5A5C66] hover:text-[#14151A] cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="text-[#5A5C66] hover:text-[#14151A] cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center dark:text-[#D0D0D0]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-[#5A5C66]">
+            <p className="text-xs text-[#5A5C66] dark:text-[#D0D0D0]">
               Queues route status immediately into offline store & forward buffer for SEOC map rerouting.
             </p>
 
             <div>
-              <label className="text-xs font-bold text-[#14151A] block mb-1">
+              <label className="text-xs font-bold text-[#14151A] block mb-1 dark:text-[#FFFFFF]">
                 Obstruction / Damage Description:
               </label>
               <textarea
                 rows={3}
                 value={damageDescription}
                 onChange={(e) => setDamageDescription(e.target.value)}
-                className="w-full p-2.5 border border-[#E4E4E0] rounded-xl text-xs bg-[#F8F8F7] text-[#14151A]"
+                className="w-full p-2.5 border border-[#E4E4E0] rounded-xl text-xs bg-[#F8F8F7] text-[#14151A] dark:text-[#FFFFFF] dark:bg-[#262626] dark:border-[#3D3D3D]"
                 required
               />
             </div>
@@ -497,7 +497,7 @@ export const FieldResponderApp: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowDamageModal(false)}
-                className="flex-1 min-h-[44px] py-2.5 text-xs font-semibold rounded-xl border border-[#E4E4E0] hover:bg-[#F8F8F7] cursor-pointer text-[#14151A]"
+                className="flex-1 min-h-[44px] py-2.5 text-xs font-semibold rounded-xl border border-[#E4E4E0] hover:bg-[#F8F8F7] cursor-pointer text-[#14151A] dark:text-[#FFFFFF] dark:border-[#3D3D3D]"
               >
                 Cancel
               </button>
@@ -516,33 +516,33 @@ export const FieldResponderApp: React.FC = () => {
       {/* MODAL 3: REQUEST BACKUP / RESOURCES */}
       {showResourceModal && (
         <div className="absolute inset-0 z-50 bg-[#14151A]/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <form onSubmit={handleRequestResource} className="bg-white rounded-xl p-5 w-full max-w-sm space-y-4 shadow-xl border border-[#E4E4E0]">
+          <form onSubmit={handleRequestResource} className="bg-white rounded-xl p-5 w-full max-w-sm space-y-4 shadow-xl border border-[#E4E4E0] dark:bg-[#2F2F2F] dark:border-[#3D3D3D]">
             <div className="flex items-center justify-between">
-              <h4 className="font-heading font-bold text-base text-[#14151A] flex items-center gap-1.5">
-                <Truck className="w-5 h-5 text-[#12294D]" />
+              <h4 className="font-heading font-bold text-base text-[#14151A] flex items-center gap-1.5 dark:text-[#FFFFFF]">
+                <Truck className="w-5 h-5 text-[#12294D] dark:text-[#FFFFFF]" />
                 {t('responder_request_resources', 'Request Field Backup')}
               </h4>
               <button
                 type="button"
                 onClick={() => setShowResourceModal(false)}
-                className="text-[#5A5C66] hover:text-[#14151A] cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="text-[#5A5C66] hover:text-[#14151A] cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center dark:text-[#D0D0D0]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <p className="text-xs text-[#5A5C66]">
+            <p className="text-xs text-[#5A5C66] dark:text-[#D0D0D0]">
               Dispatches priority request to DDMO logistics coordinator.
             </p>
 
             <div>
-              <label className="text-xs font-bold text-[#14151A] block mb-1">
+              <label className="text-xs font-bold text-[#14151A] block mb-1 dark:text-[#FFFFFF]">
                 Requested Equipment / Crew:
               </label>
               <select
                 value={resourceType}
                 onChange={(e) => setResourceType(e.target.value)}
-                className="w-full p-2.5 border border-[#E4E4E0] rounded-xl text-xs bg-[#F8F8F7] text-[#14151A]"
+                className="w-full p-2.5 border border-[#E4E4E0] rounded-xl text-xs bg-[#F8F8F7] text-[#14151A] dark:text-[#FFFFFF] dark:bg-[#262626] dark:border-[#3D3D3D]"
               >
                 <option value="Inflatable Motor Boat (Zodiac)">Inflatable Motor Boat (Zodiac)</option>
                 <option value="Life Jackets & Throw Bags (20x)">Life Jackets & Throw Bags (20x)</option>
@@ -553,7 +553,7 @@ export const FieldResponderApp: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-[#14151A] block mb-1">
+              <label className="text-xs font-bold text-[#14151A] block mb-1 dark:text-[#FFFFFF]">
                 Units Needed:
               </label>
               <input
@@ -562,7 +562,7 @@ export const FieldResponderApp: React.FC = () => {
                 max="10"
                 value={resourceQty}
                 onChange={(e) => setResourceQty(Number(e.target.value))}
-                className="w-24 p-2.5 border border-[#E4E4E0] rounded-xl text-xs bg-[#F8F8F7] text-[#14151A] font-data font-bold"
+                className="w-24 p-2.5 border border-[#E4E4E0] rounded-xl text-xs bg-[#F8F8F7] text-[#14151A] font-data font-bold dark:text-[#FFFFFF] dark:bg-[#262626] dark:border-[#3D3D3D]"
               />
             </div>
 
@@ -570,7 +570,7 @@ export const FieldResponderApp: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowResourceModal(false)}
-                className="flex-1 min-h-[44px] py-2.5 text-xs font-semibold rounded-xl border border-[#E4E4E0] hover:bg-[#F8F8F7] cursor-pointer text-[#14151A]"
+                className="flex-1 min-h-[44px] py-2.5 text-xs font-semibold rounded-xl border border-[#E4E4E0] hover:bg-[#F8F8F7] cursor-pointer text-[#14151A] dark:text-[#FFFFFF] dark:border-[#3D3D3D]"
               >
                 Cancel
               </button>
@@ -587,11 +587,11 @@ export const FieldResponderApp: React.FC = () => {
       )}
 
       {/* MOBILE BOTTOM TAB BAR - >=44px TOUCH TARGETS */}
-      <div className="absolute bottom-0 inset-x-0 bg-white dark:bg-[#17181C] border-t border-[#E4E4E0] dark:border-[#2E3038] px-4 py-2 flex items-center justify-around z-30 shadow-md">
+      <div className="absolute bottom-0 inset-x-0 bg-white dark:bg-[#212121] border-t border-[#E4E4E0] dark:border-[#B4B4B4] px-4 py-2 flex items-center justify-around z-30 shadow-md">
         <button
           onClick={() => setActiveTab('MISSION')}
           className={`flex flex-col items-center gap-1 cursor-pointer transition-all min-h-[44px] min-w-[54px] justify-center ${
-            activeTab === 'MISSION' ? 'text-[#12294D] dark:text-[#9DB8DC] font-bold' : 'text-[#5A5C66] dark:text-[#A1A3AC]'
+            activeTab === 'MISSION' ? 'text-[#12294D] dark:text-[#D0D0D0] font-bold' : 'text-[#5A5C66] dark:text-[#D0D0D0]'
           }`}
         >
           <Navigation className="w-5 h-5" />
@@ -601,7 +601,7 @@ export const FieldResponderApp: React.FC = () => {
         <button
           onClick={() => setActiveTab('MAP')}
           className={`flex flex-col items-center gap-1 cursor-pointer transition-all min-h-[44px] min-w-[54px] justify-center ${
-            activeTab === 'MAP' ? 'text-[#12294D] dark:text-[#9DB8DC] font-bold' : 'text-[#5A5C66] dark:text-[#A1A3AC]'
+            activeTab === 'MAP' ? 'text-[#12294D] dark:text-[#D0D0D0] font-bold' : 'text-[#5A5C66] dark:text-[#D0D0D0]'
           }`}
         >
           <Compass className="w-5 h-5" />
@@ -611,7 +611,7 @@ export const FieldResponderApp: React.FC = () => {
         <button
           onClick={() => setActiveTab('SHELTERS')}
           className={`flex flex-col items-center gap-1 cursor-pointer transition-all min-h-[44px] min-w-[54px] justify-center ${
-            activeTab === 'SHELTERS' ? 'text-[#12294D] dark:text-[#9DB8DC] font-bold' : 'text-[#5A5C66] dark:text-[#A1A3AC]'
+            activeTab === 'SHELTERS' ? 'text-[#12294D] dark:text-[#D0D0D0] font-bold' : 'text-[#5A5C66] dark:text-[#D0D0D0]'
           }`}
         >
           <Home className="w-5 h-5" />
@@ -621,7 +621,7 @@ export const FieldResponderApp: React.FC = () => {
         <button
           onClick={() => setActiveTab('PROFILE')}
           className={`flex flex-col items-center gap-1 cursor-pointer transition-all min-h-[44px] min-w-[54px] justify-center ${
-            activeTab === 'PROFILE' ? 'text-[#12294D] dark:text-[#9DB8DC] font-bold' : 'text-[#5A5C66] dark:text-[#A1A3AC]'
+            activeTab === 'PROFILE' ? 'text-[#12294D] dark:text-[#D0D0D0] font-bold' : 'text-[#5A5C66] dark:text-[#D0D0D0]'
           }`}
         >
           <User className="w-5 h-5" />

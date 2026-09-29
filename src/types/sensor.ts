@@ -1,8 +1,12 @@
 export type StationStatus = 'ONLINE' | 'WARNING' | 'OFFLINE';
 
 /**
- * A single live headline reading shown in the 5-metric telemetry strip.
+ * A single live headline reading shown in the telemetry strip.
  * `min`/`max` bound the random walk, `dangerAt` drives the warning state.
+ *
+ * Ids are matched by name by consumers — `floodRiskModel.featuresFromTelemetry`
+ * looks metrics up with `pick(id)`, so adding a metric cannot shift the flood
+ * feature vector. Anything the model does not consume is simply ignored.
  */
 export interface LiveSensorMetric {
   id: string;

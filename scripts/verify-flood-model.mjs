@@ -13,7 +13,9 @@ import { fileURLToPath } from 'node:url';
 import { loadFloodRiskModel, predictFloodRisk } from '../src/services/floodRiskModel.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const MODEL = process.env.FLOOD_MODEL || 'C:/Users/ADMIN/Videos/nexora_flood_risk_model_xgboost.json';
+// Prefer the in-repo model so a clean clone works out of the box. Previously
+// this pointed at a hardcoded C:/Users/ADMIN/... path that exists nowhere else.
+const MODEL = process.env.FLOOD_MODEL || 'public/models/flood_risk_xgboost.json';
 const REF = process.argv[2];
 
 if (!REF) {

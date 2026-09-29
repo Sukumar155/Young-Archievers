@@ -63,7 +63,7 @@ export function useFloodRisk(): UseFloodRiskResult {
     };
   }, []);
 
-  // Water depth + pressure come from the station mesh, not the 5-metric strip.
+  // Water depth + pressure come from the station mesh, not the live strip.
   const reference = sensorStations[0];
 
   const features = useMemo<FloodRiskFeatures | null>(

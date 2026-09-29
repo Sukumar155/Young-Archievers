@@ -13,7 +13,7 @@ export const RoleSwitcher: React.FC = () => {
   ];
 
   return (
-    <div className="flex items-center gap-1 bg-[#F1F1EF]/90 p-1 rounded-xl border border-[#DEDEDA]">
+    <div className="flex items-center gap-1 bg-[#F1F1EF]/90 p-1 rounded-xl border border-[#DEDEDA] dark:bg-[#262626] dark:border-[#3D3D3D]">
       {roles.map((r) => {
         const Icon = r.icon;
         const isActive = userRole === r.role;
@@ -21,9 +21,9 @@ export const RoleSwitcher: React.FC = () => {
           <button
             key={r.role}
             onClick={() => setUserRole(r.role)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${ isActive ? 'bg-[#12294D] text-white shadow-xs' : 'text-[#5A5C66] hover:text-[#14151A] hover:bg-white/60' }`}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${ isActive ? 'bg-[#12294D] text-white shadow-xs' : 'text-[#5A5C66] hover:text-[#14151A] hover:bg-white/60' } dark:text-[#D0D0D0] `}
           >
-            <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#7E9AC4]' : ''}`} />
+            <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#7E9AC4]' : ''} dark:text-[#E0E0E0] `}/>
             <span className="hidden md:inline">{r.label}</span>
           </button>
         );

@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Shield, Bell, MapPin, Radio, LogOut, ChevronDown,
   Home, Compass, AlertTriangle, BarChart3, Navigation, RefreshCw, Send, Globe,
-  Sun, Moon, Monitor, CloudSun
+  Sun, Moon, Monitor, CloudSun, ScanSearch
 } from 'lucide-react';
 import { useNexoraStore, AppView } from '../../store/useNexoraStore';
 import { AuthoritySwitcher } from '../shared/AuthoritySwitcher';
@@ -64,16 +64,19 @@ export const TopBar: React.FC = () => {
     { view: 'EMERGENCY_RESOURCES', label: t('nav_resources', 'Resources'), icon: Navigation },
     { view: 'ANALYTICS', label: t('nav_analytics', 'Analytics'), icon: BarChart3 },
     { view: 'SENSORS', label: t('nav_sensors', 'Sensors'), icon: Radio },
-    { view: 'WEATHER', label: t('nav_weather', 'Weather'), icon: CloudSun }
+    { view: 'WEATHER', label: t('nav_weather', 'Weather'), icon: CloudSun },
+    // "Predict" is the YOLO vision tool on its own — a single-purpose view,
+    // deliberately not the whole citizen portal.
+    { view: 'YOLO_PREDICT', label: t('nav_predict', 'Predict'), icon: ScanSearch }
   ];
 
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
 
   return (
-    <header className="sticky top-0 z-30 bg-white font-body">
+    <header className="sticky top-0 z-30 bg-white font-body dark:bg-[#2F2F2F]">
 
       {/* ── 1. UTILITY ROW ─────────────────────────────────────────────── */}
-      <div className="border-b border-[#EDEDEA]">
+      <div className="border-b border-[#EDEDEA] dark:border-[#3D3D3D]">
         <div className="nx-container h-14 flex items-center justify-between gap-3">
 
           {/* Brand · sector · language · theme */}
@@ -83,69 +86,69 @@ export const TopBar: React.FC = () => {
               className="flex items-center gap-2.5 cursor-pointer group shrink-0"
               aria-label="NEXORA — go to dashboard"
             >
-              <span className="w-8 h-8 rounded-lg bg-[#1A3A6B] flex items-center justify-center transition-colors group-hover:bg-[#142C52]">
+              <span className="w-8 h-8 rounded-lg bg-[#1A3A6B] flex items-center justify-center transition-colors dark:bg-[#2563EB] group-hover:bg-[#142C52]">
                 <Shield className="w-[17px] h-[17px] text-white" strokeWidth={2.1} />
               </span>
               <span className="hidden sm:block text-left leading-none">
-                <span className="block font-heading text-[15px] font-semibold tracking-[-0.02em] text-[#14151A]">NEXORA</span>
-                <span className="block font-data text-[9px] font-medium tracking-[0.14em] uppercase text-[#6B6D77] mt-[3px]">
+                <span className="block font-heading text-[15px] font-semibold tracking-[-0.02em] text-[#14151A] dark:text-[#FFFFFF]">NEXORA AI</span>
+                <span className="block font-data text-[9px] font-medium tracking-[0.14em] uppercase text-[#6B6D77] mt-[3px] dark:text-[#D0D0D0]">
                   Disaster Intelligence
                 </span>
               </span>
             </button>
 
-            <span className="hidden md:block h-5 w-px bg-[#E4E4E0]" />
+            <span className="hidden md:block h-5 w-px bg-[#E4E4E0] dark:bg-[#3D3D3D]" />
 
             {/* Sector selector */}
             <div className="relative hidden sm:flex items-center">
-              <MapPin className="w-3.5 h-3.5 text-[#6B6D77] absolute left-2.5 pointer-events-none" />
+              <MapPin className="w-3.5 h-3.5 text-[#6B6D77] dark:text-[#D0D0D0] absolute left-2.5 pointer-events-none" />
               <select
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
-                className="pl-8 pr-7 h-8 bg-[#F1F1EF] border border-[#E4E4E0] rounded-md text-[12px] font-medium text-[#2E3038] hover:bg-[#EFEFEC] focus:outline-none focus:border-[#1A3A6B] focus:ring-0 cursor-pointer appearance-none transition-colors max-w-[190px] truncate"
+                className="pl-8 pr-7 h-8 bg-[#F1F1EF] border border-[#E4E4E0] dark:bg-[#262626] dark:border-[#3D3D3D] rounded-md text-[12px] font-medium text-[#2E3038] hover:bg-[#EFEFEC] dark:text-[#E0E0E0] dark:hover:bg-[#2F2F2F] focus:outline-none focus:border-[#1A3A6B] focus:ring-0 cursor-pointer appearance-none transition-colors max-w-[190px] truncate"
                 title={t('location', 'Current Location')}
                 aria-label="Location Selector"
               >
                 {districtList.map(d => (
-                  <option key={d} value={d} className="bg-white text-[#14151A]">{d}</option>
+                  <option key={d} value={d} className="bg-white text-[#14151A] dark:bg-[#2F2F2F] dark:text-[#FFFFFF]">{d}</option>
                 ))}
               </select>
-              <ChevronDown className="w-3 h-3 text-[#6B6D77] absolute right-2 pointer-events-none" />
+              <ChevronDown className="w-3 h-3 text-[#6B6D77] dark:text-[#D0D0D0] absolute right-2 pointer-events-none" />
             </div>
 
             {/* Language selector — 6 supported languages */}
             <div className="relative hidden sm:flex items-center">
-              <Globe className="w-3.5 h-3.5 text-[#6B6D77] absolute left-2 pointer-events-none" />
+              <Globe className="w-3.5 h-3.5 text-[#6B6D77] dark:text-[#D0D0D0] absolute left-2 pointer-events-none" />
               <select
                 value={currentLanguage}
                 onChange={(e) => setLanguage(e.target.value as any)}
-                className="pl-7 pr-6 h-8 bg-[#F1F1EF] border border-[#E4E4E0] rounded-md text-[12px] font-medium text-[#2E3038] hover:bg-[#EFEFEC] focus:outline-none focus:border-[#1A3A6B] focus:ring-0 cursor-pointer appearance-none transition-colors"
+                className="pl-7 pr-6 h-8 bg-[#F1F1EF] border border-[#E4E4E0] dark:bg-[#262626] dark:border-[#3D3D3D] rounded-md text-[12px] font-medium text-[#2E3038] hover:bg-[#EFEFEC] dark:text-[#E0E0E0] dark:hover:bg-[#2F2F2F] focus:outline-none focus:border-[#1A3A6B] focus:ring-0 cursor-pointer appearance-none transition-colors"
                 aria-label="Language Selector"
               >
                 {LANGUAGE_OPTIONS.map(lang => (
-                  <option key={lang.code} value={lang.code} className="bg-white text-[#14151A]">
+                  <option key={lang.code} value={lang.code} className="bg-white text-[#14151A] dark:bg-[#2F2F2F] dark:text-[#FFFFFF]">
                     {lang.nativeLabel}
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-3 h-3 text-[#6B6D77] absolute right-2 pointer-events-none" />
+              <ChevronDown className="w-3 h-3 text-[#6B6D77] dark:text-[#D0D0D0] absolute right-2 pointer-events-none" />
             </div>
 
             {/* Theme selector */}
             <div className="relative hidden sm:flex items-center">
-              <ThemeIcon className="w-3.5 h-3.5 text-[#6B6D77] absolute left-2 pointer-events-none" />
+              <ThemeIcon className="w-3.5 h-3.5 text-[#6B6D77] dark:text-[#D0D0D0] absolute left-2 pointer-events-none" />
               <select
                 value={theme}
                 onChange={(e) => setTheme(e.target.value as any)}
-                className="pl-7 pr-6 h-8 bg-[#F1F1EF] border border-[#E4E4E0] rounded-md text-[12px] font-medium text-[#2E3038] hover:bg-[#EFEFEC] focus:outline-none focus:border-[#1A3A6B] focus:ring-0 cursor-pointer appearance-none transition-colors"
+                className="pl-7 pr-6 h-8 bg-[#F1F1EF] border border-[#E4E4E0] dark:bg-[#262626] dark:border-[#3D3D3D] rounded-md text-[12px] font-medium text-[#2E3038] hover:bg-[#EFEFEC] dark:text-[#E0E0E0] dark:hover:bg-[#2F2F2F] focus:outline-none focus:border-[#1A3A6B] focus:ring-0 cursor-pointer appearance-none transition-colors"
                 aria-label="Theme Selector"
                 title="Theme: Light, Dark, or System"
               >
-                <option value="system" className="bg-white text-[#14151A]">{t('theme_system', 'System')}</option>
-                <option value="light" className="bg-white text-[#14151A]">{t('theme_light', 'Light')}</option>
-                <option value="dark" className="bg-white text-[#14151A]">{t('theme_dark', 'Dark')}</option>
+                <option value="system" className="bg-white text-[#14151A] dark:bg-[#2F2F2F] dark:text-[#FFFFFF]">{t('theme_system', 'System')}</option>
+                <option value="light" className="bg-white text-[#14151A] dark:bg-[#2F2F2F] dark:text-[#FFFFFF]">{t('theme_light', 'Light')}</option>
+                <option value="dark" className="bg-white text-[#14151A] dark:bg-[#2F2F2F] dark:text-[#FFFFFF]">{t('theme_dark', 'Dark')}</option>
               </select>
-              <ChevronDown className="w-3 h-3 text-[#6B6D77] absolute right-2 pointer-events-none" />
+              <ChevronDown className="w-3 h-3 text-[#6B6D77] dark:text-[#D0D0D0] absolute right-2 pointer-events-none" />
             </div>
           </div>
 
@@ -153,7 +156,7 @@ export const TopBar: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
 
             {/* Network / sync status — a quiet instrument readout */}
-            <div className="hidden sm:flex items-center gap-2 h-8 pl-2.5 pr-1.5 bg-[#F1F1EF] border border-[#E4E4E0] rounded-md">
+            <div className="hidden sm:flex items-center gap-2 h-8 pl-2.5 pr-1.5 bg-[#F1F1EF] border border-[#E4E4E0] dark:bg-[#262626] dark:border-[#3D3D3D] rounded-md">
               <button
                 data-testid="topbar-offline-toggle"
                 onClick={toggleOfflineMode}
@@ -167,7 +170,7 @@ export const TopBar: React.FC = () => {
                     ? 'bg-[#1A3A6B] animate-spin rounded-[2px]'
                     : 'bg-[#126B34]'
                 }`} />
-                <span className="font-data text-[11px] font-medium text-[#5A5C66] whitespace-nowrap">
+                <span className="font-data text-[11px] font-medium text-[#5A5C66] dark:text-[#D0D0D0] whitespace-nowrap">
                   {isOffline || mapDataStatus === 'OFFLINE'
                     ? t('offline', 'OFFLINE')
                     : mapDataStatus === 'SYNCING'
@@ -180,7 +183,7 @@ export const TopBar: React.FC = () => {
                 <button
                   onClick={syncQueuedUpdates}
                   title="Sync queued changes"
-                  className="flex items-center gap-1 h-6 px-1.5 bg-[#EEF2F8] text-[#1A3A6B] border border-[#C3D0E4] rounded-sm font-data text-[10px] font-semibold hover:bg-[#E3EAF4] transition-colors cursor-pointer"
+                  className="flex items-center gap-1 h-6 px-1.5 bg-[#EEF2F8] text-[#1A3A6B] border border-[#C3D0E4] dark:bg-[#1F2937] dark:text-[#D0D0D0] dark:border-[#374151] rounded-sm font-data text-[10px] font-semibold hover:bg-[#E3EAF4] transition-colors cursor-pointer"
                 >
                   <RefreshCw className={`w-2.5 h-2.5 ${mapDataStatus === 'SYNCING' ? 'animate-spin' : ''}`} />
                   <span>{queuedSyncCount}</span>
@@ -202,10 +205,10 @@ export const TopBar: React.FC = () => {
             {/* USSD (*123#) compact utility */}
             <button
               onClick={() => toggleUSSDModal(true)}
-              className="hidden md:flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] font-medium bg-white text-[#2E3038] hover:bg-[#F1F1EF] border border-[#E4E4E0] transition-colors cursor-pointer"
+              className="hidden md:flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] font-medium bg-white text-[#2E3038] dark:text-[#E0E0E0] hover:bg-[#F1F1EF] border border-[#E4E4E0] dark:bg-[#262626] dark:border-[#3D3D3D] transition-colors cursor-pointer"
               title="Simulate 2G USSD (*123#) Flow"
             >
-              <Radio className="w-3.5 h-3.5 text-[#5A5C66]" />
+              <Radio className="w-3.5 h-3.5 text-[#5A5C66] dark:text-[#D0D0D0]" />
               <span className="font-data text-[11px] font-medium">*123#</span>
             </button>
 
@@ -213,7 +216,7 @@ export const TopBar: React.FC = () => {
             <div className="relative">
               <button
                 onClick={() => setCurrentView('ALERTS')}
-                className="w-8 h-8 rounded-md border border-[#E4E4E0] bg-white hover:bg-[#F1F1EF] flex items-center justify-center text-[#2E3038] relative cursor-pointer transition-colors"
+                className="w-8 h-8 rounded-md border border-[#E4E4E0] bg-white hover:bg-[#F1F1EF] dark:border-[#3D3D3D] dark:bg-[#2F2F2F] dark:hover:bg-[#3D3D3D] flex items-center justify-center text-[#2E3038] dark:text-[#E0E0E0] relative cursor-pointer transition-colors"
                 aria-label={`Notifications, ${notificationCount} unread`}
               >
                 <Bell className="w-[15px] h-[15px]" />
@@ -226,13 +229,13 @@ export const TopBar: React.FC = () => {
             </div>
 
             {/* Account */}
-            <div className="flex items-center gap-2 pl-2.5 border-l border-[#E4E4E0]">
-              <div className="w-7 h-7 rounded-md bg-[#EEF2F8] text-[#1A3A6B] border border-[#C3D0E4] font-semibold text-[11px] flex items-center justify-center">
+            <div className="flex items-center gap-2 pl-2.5 border-l border-[#E4E4E0] dark:border-l-[#3D3D3D]">
+              <div className="w-7 h-7 rounded-md bg-[#EEF2F8] text-[#1A3A6B] border border-[#C3D0E4] dark:bg-[#1F2937] dark:text-[#D0D0D0] dark:border-[#374151] font-semibold text-[11px] flex items-center justify-center">
                 {userName.split(' ').map(n => n[0]).slice(0, 2).join('')}
               </div>
               <div className="hidden xl:block text-left leading-none">
-                <div className="text-[12px] font-medium text-[#14151A]">{userName}</div>
-                <div className="text-[10px] font-medium text-[#6B6D77] mt-1 tracking-[0.02em]">
+                <div className="text-[12px] font-medium text-[#14151A] dark:text-[#FFFFFF]">{userName}</div>
+                <div className="text-[10px] font-medium text-[#6B6D77] mt-1 tracking tracking-[-0.02em] dark:text-[#D0D0D0]">
                   {userRole.replace('_', ' ')}
                 </div>
               </div>
@@ -240,7 +243,7 @@ export const TopBar: React.FC = () => {
                 onClick={logout}
                 title={t('logout', 'Sign Out')}
                 aria-label={t('logout', 'Sign Out')}
-                className="w-7 h-7 flex items-center justify-center text-[#6B6D77] hover:text-[#B42318] hover:bg-[#FCF1F0] rounded-md transition-colors cursor-pointer"
+                className="w-7 h-7 flex items-center justify-center text-[#6B6D77] hover:text-[#B42318] dark:text-[#D0D0D0] hover:bg-[#FCF1F0] dark:hover:bg-[#3F1414] rounded-md transition-colors cursor-pointer"
               >
                 <LogOut className="w-[15px] h-[15px]" />
               </button>
@@ -252,7 +255,7 @@ export const TopBar: React.FC = () => {
 
       {/* ── 2. NAVIGATION — authority only; citizens stay in the Citizen Portal UI ── */}
       {!isCitizen && (
-        <nav aria-label="Main Navigation" className="border-b border-[#E4E4E0] bg-white">
+        <nav aria-label="Main Navigation" className="border-b border-[#E4E4E0] bg-white dark:border-[#3D3D3D] dark:bg-[#2F2F2F]">
           <div className="nx-container flex items-center justify-between overflow-x-auto scrollbar-none h-11 gap-1">
 
             <div className="flex items-center h-full">
@@ -267,8 +270,8 @@ export const TopBar: React.FC = () => {
                     aria-current={isActive ? 'page' : undefined}
                     className={`relative flex items-center gap-1.5 h-full px-3 text-[13px] whitespace-nowrap cursor-pointer transition-colors ${
                       isActive
-                        ? 'text-[#1A3A6B] font-semibold after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:h-[2px] after:bg-[#1A3A6B] after:rounded-full'
-                        : 'text-[#5A5C66] font-medium hover:text-[#14151A] hover:bg-[#F8F8F7]'
+                        ? 'text-[#1A3A6B] dark:text-[#D0D0D0] font-semibold after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:h-[2px] after:bg-[#1A3A6B] dark:after:bg-[#60A5FA] after:rounded-full'
+                        : 'text-[#5A5C66] font-medium hover:text-[#14151A] dark:text-[#D0D0D0] dark:hover:text-[#FFFFFF] hover:bg-[#F8F8F7] dark:hover:bg-[#262626]'
                     }`}
                   >
                     <Icon className="w-[15px] h-[15px]" strokeWidth={isActive ? 2.1 : 1.9} />
@@ -276,8 +279,8 @@ export const TopBar: React.FC = () => {
                     {item.badge && (
                       <span className={`font-data text-[9px] font-semibold px-1.5 py-0.5 rounded-sm ${
                         isActive
-                          ? 'bg-[#EEF2F8] text-[#1A3A6B]'
-                          : 'bg-[#F1F1EF] text-[#5A5C66]'
+                          ? 'bg-[#EEF2F8] dark:bg-[#1F2937] text-[#1A3A6B] dark:text-[#D0D0D0]'
+                          : 'bg-[#F1F1EF] dark:bg-[#262626] text-[#5A5C66] dark:text-[#D0D0D0]'
                       }`}>
                         {item.badge}
                       </span>

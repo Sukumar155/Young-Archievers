@@ -1,5 +1,5 @@
 import React from 'react';
-import { Droplets, CloudRain, Wind, Gauge, Thermometer, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Droplets, CloudRain, Wind, Gauge, Thermometer, CloudFog, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useNexoraStore } from '../../store/useNexoraStore';
 import { useLiveSensors } from '../../hooks/useLiveSensors';
 import type { LiveSensorMetric } from '../../types/sensor';
@@ -9,15 +9,49 @@ const METRIC_ICON: Record<string, React.ComponentType<{ className?: string }>> =
   rain: CloudRain,
   wind: Wind,
   humidity: Gauge,
-  temp: Thermometer
+  temp: Thermometer,
+  aqi: CloudFog
 };
 
 const METRIC_TINT: Record<string, string> = {
-  water: 'text-[#1A3A6B] dark:text-[#9DB8DC]',
-  rain: 'text-[#2C5C93] dark:text-[#9DB8DC]',
-  wind: 'text-[#5A5C66] dark:text-[#A1A3AC]',
-  humidity: 'text-[#1A3A6B] dark:text-[#9DB8DC]',
-  temp: 'text-[#A15C07] dark:text-[#D9A03A]'
+  water: 'text-[#1A3A6B] dark:text-[#D0D0D0]',
+  rain: 'text-[#2C5C93] dark:text-[#D0D0D0]',
+  wind: 'text-[#5A5C66] dark:text-[#D0D0D0]',
+  humidity: 'text-[#1A3A6B] dark:text-[#D0D0D0]',
+  temp: 'text-[#A15C07] dark:text-[#D0D0D0]',
+  aqi: 'text-[#6941C6] dark:text-[#D0D0D0]'
+};
+
+/**
+ * Column layout per metric count.
+ *
+ * This used to be a hardcoded `lg:grid-cols-5`, which silently squeezed the
+ * strip the moment a sixth reading was added. Keyed by count so adding a metric
+ * cannot break the layout, with the classes spelled out in full because Tailwind
+ * only emits rules it can see written literally — a template-interpolated
+ * `grid-cols-${n}` would be purged from the build.
+ *
+ * `full` uses 3 columns at 6 readings rather than 6, so the Sensors-page tiles
+ * keep enough width for the bar and the min/max/danger row underneath.
+ */
+const GRID_BY_COUNT: Record<number, { compact: string; full: string }> = {
+  4: {
+    compact: 'grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-[#EDEDEA] dark:divide-[#B4B4B4]',
+    full: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[#EDEDEA] dark:bg-[#B4B4B4]'
+  },
+  5: {
+    compact: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-[#EDEDEA] dark:divide-[#B4B4B4]',
+    full: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-px bg-[#EDEDEA] dark:bg-[#B4B4B4]'
+  },
+  6: {
+    compact: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-[#EDEDEA] dark:divide-[#B4B4B4]',
+    full: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[#EDEDEA] dark:bg-[#B4B4B4]'
+  }
+};
+
+const FALLBACK_GRID = {
+  compact: 'grid grid-cols-2 sm:grid-cols-3 divide-x divide-y sm:divide-y-0 divide-[#EDEDEA] dark:divide-[#B4B4B4]',
+  full: 'grid grid-cols-1 sm:grid-cols-2 gap-px bg-[#EDEDEA] dark:bg-[#B4B4B4]'
 };
 
 const TrendIcon = ({ trend }: { trend: LiveSensorMetric['trend'] }) => {
@@ -57,22 +91,22 @@ export const LiveSensorStrip: React.FC<LiveSensorStripProps> = ({
     <div
       data-testid="live-sensor-strip"
       data-variant={variant}
-      className={`bg-white dark:bg-[#17181C] border border-[#DEDEDA] dark:border-[#2E3038] rounded-xl shadow-xs ${className}`}
+      className={`bg-white dark:bg-[#212121] border border-[#DEDEDA] dark:border-[#B4B4B4] rounded-xl shadow-xs ${className}`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-[#EDEDEA] dark:border-[#2E3038]">
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-[#EDEDEA] dark:border-[#B4B4B4]">
         <div className="min-w-0">
-          <h2 className="font-heading font-bold text-sm text-[#12294D] dark:text-[#F1F1EF]">{title}</h2>
+          <h2 className="font-heading font-bold text-sm text-[#12294D] dark:text-[#FFFFFF]">{title}</h2>
           {subtitle && (
-            <p className="text-[11px] text-[#6B6D77] dark:text-[#A1A3AC] mt-0.5 truncate">{subtitle}</p>
+            <p className="text-[11px] text-[#6B6D77] dark:text-[#D0D0D0] mt-0.5 truncate">{subtitle}</p>
           )}
         </div>
 
         <span
           className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider font-data flex-shrink-0 ${
             paused
-              ? 'bg-[#F1F1EF] dark:bg-[#1C1D22] text-[#6B6D77] dark:text-[#A1A3AC] border border-[#DEDEDA] dark:border-[#2E3038]'
-              : 'bg-[#E4F3E9] dark:bg-[#14251F]/60 text-[#126B34] dark:text-[#7CC99A] border border-[#CFE6D8] dark:border-[#234133]'
+              ? 'bg-[#F1F1EF] dark:bg-[#2F2F2F] text-[#6B6D77] dark:text-[#D0D0D0] border border-[#DEDEDA] dark:border-[#B4B4B4]'
+              : 'bg-[#E4F3E9] dark:bg-[#0A2E22]/60 text-[#126B34] dark:text-[#E0E0E0] border border-[#CFE6D8] dark:border-[#14532D]'
           }`}
         >
           <span className="relative flex h-1.5 w-1.5">
@@ -81,7 +115,7 @@ export const LiveSensorStrip: React.FC<LiveSensorStripProps> = ({
             )}
             <span
               className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
-                paused ? 'bg-[#6B6D77] dark:text-[#A1A3AC]' : 'bg-[#126B34]'
+                paused ? 'bg-[#6B6D77] dark:text-[#D0D0D0]' : 'bg-[#126B34]'
               }`}
             />
           </span>
@@ -89,17 +123,11 @@ export const LiveSensorStrip: React.FC<LiveSensorStripProps> = ({
         </span>
       </div>
 
-      {/* The 5 readings */}
-      <div
-        className={
-          variant === 'compact'
-            ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-[#EDEDEA] dark:divide-[#2E3038]'
-            : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-px bg-[#EDEDEA] dark:bg-[#2E3038]'
-        }
-      >
+      {/* The live readings — one tile per entry in liveSensorMetrics */}
+      <div className={(GRID_BY_COUNT[metrics.length] ?? FALLBACK_GRID)[variant]}>
         {metrics.map(m => {
           const Icon = METRIC_ICON[m.id] ?? Gauge;
-          const tint = METRIC_TINT[m.id] ?? 'text-[#1A3A6B] dark:text-[#9DB8DC]';
+          const tint = METRIC_TINT[m.id] ?? 'text-[#1A3A6B] dark:text-[#D0D0D0]';
 
           // A reading is "critical" once it crosses its danger threshold.
           // The warning band is the last 12% of the climb from the metric's
@@ -117,11 +145,11 @@ export const LiveSensorStrip: React.FC<LiveSensorStripProps> = ({
             <div
               key={m.id}
               className={`px-4 py-3 ${
-                variant === 'compact' ? '' : 'bg-white dark:bg-[#17181C]'
+                variant === 'compact' ? '' : 'bg-white dark:bg-[#212121]'
               } ${variant === 'full' ? 'space-y-2.5' : ''}`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#6B6D77] dark:text-[#A1A3AC] font-data truncate">
+                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#6B6D77] dark:text-[#D0D0D0] font-data truncate">
                   <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${tint}`} />
                   {m.label}
                 </span>
@@ -130,10 +158,10 @@ export const LiveSensorStrip: React.FC<LiveSensorStripProps> = ({
                   <span
                     className={`text-[9px] font-bold font-data px-1.5 py-0.5 rounded flex-shrink-0 ${
                       isCritical
-                        ? 'bg-[#FCF1F0] dark:bg-[#2A1614]/50 text-[#B42318] dark:text-[#E0776C]'
+                        ? 'bg-[#FCF1F0] dark:bg-[#3F1414]/50 text-[#B42318] dark:text-[#C0C0C0]'
                         : isWarning
-                        ? 'bg-[#FAF0D8] dark:bg-[#241B0B]/50 text-[#A15C07] dark:text-[#D9A03A]'
-                        : 'bg-[#E4F3E9] dark:bg-[#14251F]/50 text-[#126B34] dark:text-[#7CC99A]'
+                        ? 'bg-[#FAF0D8] dark:bg-[#3A2A0A]/50 text-[#A15C07] dark:text-[#D0D0D0]'
+                        : 'bg-[#E4F3E9] dark:bg-[#0A2E22]/50 text-[#126B34] dark:text-[#E0E0E0]'
                     }`}
                   >
                     {isCritical ? 'CRITICAL' : isWarning ? 'WARNING' : 'NORMAL'}
@@ -147,20 +175,20 @@ export const LiveSensorStrip: React.FC<LiveSensorStripProps> = ({
                     variant === 'compact' ? 'text-lg' : 'text-2xl'
                   } ${
                     isCritical
-                      ? 'text-[#B42318] dark:text-[#E0776C]'
-                      : 'text-[#12294D] dark:text-[#F1F1EF]'
+                      ? 'text-[#B42318] dark:text-[#C0C0C0]'
+                      : 'text-[#12294D] dark:text-[#FFFFFF]'
                   }`}
                 >
                   {m.value.toFixed(m.precision)}
                 </span>
-                <span className="text-[11px] text-[#6B6D77] dark:text-[#A1A3AC] font-data">{m.unit}</span>
+                <span className="text-[11px] text-[#6B6D77] dark:text-[#D0D0D0] font-data">{m.unit}</span>
 
                 <span
                   className={`ml-auto flex items-center gap-0.5 text-[10px] font-data font-bold ${
                     m.trend === 'up'
-                      ? 'text-[#B42318] dark:text-[#E0776C]'
+                      ? 'text-[#B42318] dark:text-[#C0C0C0]'
                       : m.trend === 'down'
-                      ? 'text-[#126B34] dark:text-[#7CC99A]'
+                      ? 'text-[#126B34] dark:text-[#E0E0E0]'
                       : 'text-[#A1A3AC]'
                   }`}
                   title={`${m.delta > 0 ? '+' : ''}${m.delta.toFixed(m.precision)} ${m.unit} since last reading`}
@@ -172,21 +200,21 @@ export const LiveSensorStrip: React.FC<LiveSensorStripProps> = ({
 
               {variant === 'full' && (
                 <>
-                  <div className="w-full bg-[#F1F1EF] dark:bg-[#1C1D22] h-1.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-[#F1F1EF] dark:bg-[#2F2F2F] h-1.5 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-700 ${
-                        isCritical ? 'bg-[#B42318]' : isWarning ? 'bg-[#A15C07]' : 'bg-[#1A3A6B] dark:bg-[#5B7BA8]'
+                        isCritical ? 'bg-[#B42318]' : isWarning ? 'bg-[#A15C07]' : 'bg-[#1A3A6B] dark:bg-[#93C5FD]'
                       }`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-[10px] font-data text-[#6B6D77] dark:text-[#A1A3AC]">
+                  <div className="flex items-center justify-between text-[10px] font-data text-[#6B6D77] dark:text-[#D0D0D0]">
                     <span>
                       {m.min}
                       {m.unit} – {m.max}
                       {m.unit}
                     </span>
-                    <span className="font-bold text-[#B42318] dark:text-[#E0776C]">
+                    <span className="font-bold text-[#B42318] dark:text-[#C0C0C0]">
                       Danger {m.dangerAt}
                       {m.unit}
                     </span>

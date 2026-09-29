@@ -1,5 +1,13 @@
-@import "./tokens.css";
-@import "./typography.css";
+/* NOTE: tokens.css and typography.css are imported by index.css, which imports
+   this file. They are deliberately NOT re-imported here.
+
+   A CSS `@import` is a fetch, and a repeated fetch of the same URL is dropped
+   rather than inlined twice. When this file imported them as well, the duplicate
+   was resolved away — and because the dark token block
+   (`[data-theme="dark"]`) is the second half of tokens.css, the *light* `:root`
+   values survived into the bundle while the dark ones did not. Dark mode then
+   fell back to the light canvas and the light text ramp, which is why headings
+   and the top-bar selects rendered black on a dark page. */
 
 /* =============================================================================
    NEXORA — Global Styles & Component Primitives
@@ -16,26 +24,39 @@ html, body {
   padding: 0;
   min-height: 100%;
   font-family: var(--font-body);
-  color: var(--color-text-primary);
-  background-color: var(--color-bg);
+  color: var(--color-text-primary, #14151A);
+  background-color: var(--color-bg, #F8F8F7);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv11' on, 'ss01' on;
   text-rendering: optimizeLegibility;
 }
 
+/* NOTE — do not add font-feature-settings here again.
+   This file used to force `'cv11' on, 'ss01' on` on html/body. `cv11` is
+   Inter's single-storey "a" alternate: turning it on replaces the double-storey
+   a with ɑ, which is why lowercase "a" looked like a different letter. It was
+   applied twice (html/body and .font-heading), so it affected every page.
+   Google's Inter build ships no cv11/ss01 at all, so the declaration was doing
+   nothing for the webfont while remaining a live footgun for anyone whose
+   fallback resolved to a locally installed Inter. Defaults only from here. */
+
 body {
-  /* Warm off-white canvas. Deliberately not pure white. */
-  background-color: var(--nx-canvas);
+  /* Warm off-white canvas. Deliberately not pure white.
+     The dark counterpart is set by the `html.dark, body.dark,
+     [data-theme="dark"]` rule further down, which uses a literal value. */
+  background-color: var(--nx-canvas, #F8F8F7);
 }
 
 #root {
   min-height: 100vh;
 }
 
-/* Text selection — brand-tinted, low contrast, calm */
+/* Text selection — brand-tinted, low contrast, calm.
+   Theme-aware: a fixed cobalt wash plus a fixed near-black thumb left dark mode
+   with a warm-dark scrollbar that vanished against the #212121 canvas, and a
+   selection colour that ignored the surface it sat on. */
 ::selection {
-  background-color: rgba(26, 58, 107, 0.13);
+  background-color: var(--nx-selection, rgba(26, 58, 107, 0.13));
   color: var(--color-text-primary);
 }
 
@@ -43,12 +64,25 @@ body {
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(20, 21, 26, 0.16);
+  background: var(--nx-scrollbar, rgba(20, 21, 26, 0.16));
   border-radius: 9999px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(20, 21, 26, 0.3); background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--nx-scrollbar-hover, rgba(20, 21, 26, 0.3));
+  background-clip: content-box;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb,
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  background-clip: content-box;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover,
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.26);
+  background-clip: content-box;
+}
 
 .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
@@ -513,7 +547,7 @@ textarea:focus-visible, a:focus-visible, [tabindex]:focus-visible {
 }
 .skeleton * { visibility: hidden; }
 .dark .skeleton {
-  background: linear-gradient(90deg, #1C1D22 25%, #23242B 50%, #1C1D22 75%);
+  background: linear-gradient(90deg, #262626 25%, #2F2F2F 50%, #262626 75%);
   background-size: 200% 100%;
 }
 @keyframes skeleton-shimmer {
@@ -558,18 +592,31 @@ img { max-width: 100%; height: auto; }
    ========================================================================== */
 html.dark, body.dark, [data-theme="dark"] {
   color-scheme: dark;
-  background-color: var(--color-bg) !important;
-  color: var(--color-text-primary) !important;
+  /* Literal values, not var() references.
+   *
+   * This rule used to read `var(--color-bg)` / `var(--color-text-primary)`,
+   * which made dark mode entirely dependent on the `[data-theme="dark"]` token
+   * block in tokens.css surviving the CSS build. In the Vite production build
+   * that block was being dropped — only the light `:root` values shipped — so
+   * the vars resolved to their LIGHT values and dark mode rendered black text
+   * on a light canvas. Spelling the values out here means the canvas and the
+   * default ink are correct even if the token block is lost again, and it keeps
+   * working when the tokens do ship, because the two agree. */
+  background-color: #212121 !important;
+  color: #FFFFFF !important;
 }
 
+/* Light surface utilities that have no `dark:` counterpart get remapped here.
+   Targets follow the neutral graphite ladder (subtle fill / card), so a
+   component that hard-codes a light wash still lands on a dark surface. */
 .dark .bg-\[\#F8F8F7\], .dark .bg-\[\#F1F1EF\], .dark .bg-\[\#F4F4F1\],
 .dark .bg-\[\#EFEFEC\] {
-  background-color: #14151A !important;
+  background-color: #262626 !important;
 }
 
 .dark .bg-\[\#1A1B20\], .dark .bg-\[\#1C1D22\], .dark .bg-\[\#17181C\],
 .dark .bg-\[\#15161A\] {
-  background-color: #1A1B20 !important;
+  background-color: #2F2F2F !important;
 }
 
 /* ---------- Accent text in dark mode ----------
@@ -577,8 +624,8 @@ html.dark, body.dark, [data-theme="dark"] {
    components use it without a dark: counterpart, which leaves it sitting on a
    graphite surface at 3.9:1. Lift it to the dark-mode accent token so the
    accent is legible in both themes. */
-.dark .text-\[\#5B7BA8\] { color: #9DB8DC !important; }
-.dark .text-\[\#7E9AC4\] { color: #A5BDDD !important; }
+.dark .text-\[\#5B7BA8\] { color: #E0E0E0 !important; }
+.dark .text-\[\#7E9AC4\] { color: #E0E0E0 !important; }
 
 .dark ::-webkit-scrollbar-thumb { background: rgba(241, 241, 239, 0.18); background-clip: content-box; }
 .dark ::-webkit-scrollbar-thumb:hover { background: rgba(241, 241, 239, 0.32); background-clip: content-box; }
@@ -615,10 +662,53 @@ html.dark, body.dark, [data-theme="dark"] {
 }
 .leaflet-bar a:hover { background: #F1F1EF !important; color: #1A3A6B !important; }
 
-.dark .leaflet-container { background-color: #14151A !important; }
-.dark .leaflet-popup-content-wrapper { background: #1C1D22 !important; color: #F1F1EF !important; border-color: #2A2B33 !important; }
-.dark .leaflet-popup-tip { background: #1C1D22 !important; border-color: #2A2B33 !important; }
-.dark .leaflet-control-attribution { background: rgba(23, 24, 28, 0.88) !important; color: #74767F !important; }
-.dark .leaflet-control-attribution a { color: #A1A3AC !important; }
-.dark .leaflet-bar a { background: #1C1D22 !important; color: #F1F1EF !important; border-bottom-color: #2A2B33 !important; }
-.dark .leaflet-bar a:hover { background: #26272E !important; }
+/* ---------- Citizen portal emergency banner ----------
+   The banner is filled with a saturated red (#C81E1E), so the text sitting
+   directly on that red has to be light. It is set here rather than with a
+   Tailwind `text-white` utility because a utility cannot win this one.
+
+   design-system/typography.css declares bare element rules that set a colour:
+
+       h1, .h1  ->  color: var(--color-text-primary)     (near-black)
+       p        ->  color: var(--color-text-secondary)
+
+   Those are UNLAYERED, while every Tailwind v4 utility is emitted inside
+   `@layer utilities`. CSS Cascade Level 5 ranks layer order ABOVE specificity,
+   so an unlayered declaration beats a layered one no matter how specific. That
+   made `h1, .h1` (0,0,1) and `p` (0,0,1) silently override `text-white` (0,1,0)
+   - the title and the description both rendered near-black on the red, while
+   the badge next to them (a <span>, which no element rule targets) stayed
+   white. That mismatch was the tell.
+
+   Consequences worth knowing:
+     - Adding `!important`, or a more specific Tailwind class, does NOT help.
+       The layer comparison happens before specificity is consulted.
+     - The fix has to be unlayered as well, and beat the element selectors on
+       specificity. This rule is (0,1,1) via `.nx-alert-banner :is(h1, p)`.
+
+   Scope is deliberately narrow. Only `h1` and `p` are touched - the two
+   elements that actually lie on the red. The SOS control is a white surface
+   with red ink, the report control is white on translucent white, and the
+   status chip is a white surface with coloured text; none of them are selected
+   here, so their colours are untouched. Nothing outside .nx-alert-banner is
+   affected, so the rest of the app keeps the existing cascade behaviour.
+
+   NOTE for whoever edits this next: do not put a nested CSS comment inside
+   this comment. An earlier version of it did, and the inner terminator closed
+   the block early - PostCSS then read the remaining prose as CSS, dropped the
+   rule below it, and the dev server served a 500. Keep the examples above as
+   plain prose with no `*` `/` sequence. */
+.nx-alert-banner :is(h1, p) {
+  color: #FFFFFF;
+}
+
+/* Leaflet chrome, dark — the neutral graphite ladder, white/off-white text.
+   These were still on the old warm-black palette, so popups and the zoom bar
+   stayed near-#1C1D22 while the rest of the app moved to #2F2F2F/#3D3D3D. */
+.dark .leaflet-container { background-color: #171717 !important; }
+.dark .leaflet-popup-content-wrapper { background: #2F2F2F !important; color: #FFFFFF !important; border-color: #3D3D3D !important; }
+.dark .leaflet-popup-tip { background: #2F2F2F !important; border-color: #3D3D3D !important; }
+.dark .leaflet-control-attribution { background: rgba(47, 47, 47, 0.88) !important; color: #C0C0C0 !important; }
+.dark .leaflet-control-attribution a { color: #E0E0E0 !important; }
+.dark .leaflet-bar a { background: #2F2F2F !important; color: #FFFFFF !important; border-bottom-color: #3D3D3D !important; }
+.dark .leaflet-bar a:hover { background: #3D3D3D !important; }

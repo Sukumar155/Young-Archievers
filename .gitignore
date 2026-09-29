@@ -33,7 +33,33 @@ lerna-debug.log*
 # Local runtime & scratch files
 *.local
 scratch/
+
+# Runtime data: SOS reports, incidents, alerts, officer records.
+#
+# This is operational data, not source. It accumulates real phone numbers and
+# location coordinates as the app is used, and this repository is PUBLIC, so
+# publishing it would expose that to anyone.
+#
+# NOTE: these files were committed before this rule existed. A .gitignore entry
+# has no effect on a path git already tracks, so they had to be explicitly
+# untracked with `git rm --cached` — see the commit that added this rule.
 server/data/
+
+# Pre-PostgreSQL backup of the same runtime JSON. Same reasoning, and it is a
+# duplicate, so it has no place in the repository at all.
+server/_pre_pg_backup/
+
+# Python bytecode from the scripts/ tooling
+__pycache__/
+*.py[cod]
+
+# YOLO weight files (large binaries — keep them local, see server/YOLO_SETUP.md)
+server/models/**/*.pt
+
+# COCO context-pass weights. Ultralytics downloads yolo11n.pt into the CWD on
+# first use; keep it out of the repo rather than committing a 5 MB binary.
+yolo11n.pt
+yolo11n.pt.part
 
 # Editor & IDE files
 .vscode/*

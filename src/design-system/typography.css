@@ -7,7 +7,8 @@
 .font-heading {
   font-family: var(--font-headings);
   letter-spacing: -0.018em;
-  font-feature-settings: 'cv11' on, 'ss01' on;
+  /* No font-feature-settings. 'cv11' here forced Inter's single-storey "a"
+     (ɑ) on every heading — see the note in globals.css. */
 }
 
 .font-body {

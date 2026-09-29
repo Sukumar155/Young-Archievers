@@ -393,7 +393,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
   const isOffRoute = offRouteKm !== null && offRouteKm > OFF_ROUTE_TOLERANCE_KM;
 
   return (
-    <div className={`relative overflow-hidden rounded-xl border border-[#DEDEDA] dark:border-[#2E3038] ${className}`}>
+    <div className={`relative overflow-hidden rounded-xl border border-[#DEDEDA] dark:border-[#B4B4B4] ${className}`}>
       <MapContainer
         center={center}
         zoom={13}
@@ -439,8 +439,8 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
         <Marker position={[route?.originLat ?? center[0], route?.originLng ?? center[1]]} icon={originIcon}>
           <Popup>
             <div className="text-xs">
-              <div className="font-bold text-[#14151A]">Start</div>
-              <div className="text-[#5A5C66]">{route?.originName ?? 'Your location'}</div>
+              <div className="font-bold text-[#14151A] dark:text-[#FFFFFF]">Start</div>
+              <div className="text-[#5A5C66] dark:text-[#D0D0D0]">{route?.originName ?? 'Your location'}</div>
             </div>
           </Popup>
         </Marker>
@@ -450,8 +450,8 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
           <Marker position={[points[points.length - 1][0], points[points.length - 1][1]]} icon={destIcon}>
             <Popup>
               <div className="text-xs">
-                <div className="font-bold text-[#14151A]">Safe relief camp</div>
-                <div className="text-[#5A5C66]">{route.destinationName}</div>
+                <div className="font-bold text-[#14151A] dark:text-[#FFFFFF]">Safe relief camp</div>
+                <div className="text-[#5A5C66] dark:text-[#D0D0D0]">{route.destinationName}</div>
               </div>
             </Popup>
           </Marker>
@@ -476,7 +476,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
               type="button"
               onClick={journey === 'arrived' ? startJourney : stopJourney}
               data-testid="stop-journey"
-              className="px-3.5 py-2 rounded-lg bg-white/95 dark:bg-[#17181C]/95 hover:bg-[#F1F1EF] dark:hover:bg-[#1C1D22] text-[#14151A] dark:text-[#F1F1EF] border border-[#DEDEDA] dark:border-[#2E3038] text-xs font-bold shadow-lg transition-colors cursor-pointer flex items-center gap-1.5 backdrop-blur"
+              className="px-3.5 py-2 rounded-lg bg-white/95 dark:bg-[#212121]/95 hover:bg-[#F1F1EF] dark:hover:bg-[#1C1D22] text-[#14151A] dark:text-[#FFFFFF] border border-[#DEDEDA] dark:border-[#B4B4B4] text-xs font-bold shadow-lg transition-colors cursor-pointer flex items-center gap-1.5 backdrop-blur"
             >
               {journey === 'arrived' ? (
                 <>
@@ -494,7 +494,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
 
           {/* GPS problems are surfaced here, next to the control that caused them */}
           {gpsError && (
-            <div className="px-2.5 py-1.5 rounded-lg bg-[#FCF1F0]/95 dark:bg-[#2A1614]/95 border border-[#FBE9E7] dark:border-[#4A2622] text-[10px] font-bold text-[#B42318] dark:text-[#E0776C] shadow-lg backdrop-blur flex items-center gap-1.5 max-w-[230px]">
+            <div className="px-2.5 py-1.5 rounded-lg bg-[#FCF1F0]/95 dark:bg-[#3F1414]/95 border border-[#FBE9E7] dark:border-[#7F1D1D] text-[10px] font-bold text-[#B42318] dark:text-[#C0C0C0] shadow-lg backdrop-blur flex items-center gap-1.5 max-w-[230px]">
               <AlertTriangle className="w-3 h-3 flex-shrink-0" />
               <span>{gpsError}</span>
             </div>
@@ -506,16 +506,16 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
       {route && active && (
         <div
           data-testid="journey-hud"
-          className="absolute left-3 bottom-3 z-[500] w-[252px] rounded-lg bg-white/95 dark:bg-[#17181C]/95 border border-[#DEDEDA] dark:border-[#2E3038] shadow-lg backdrop-blur overflow-hidden"
+          className="absolute left-3 bottom-3 z-[500] w-[252px] rounded-lg bg-white/95 dark:bg-[#212121]/95 border border-[#DEDEDA] dark:border-[#B4B4B4] shadow-lg backdrop-blur overflow-hidden"
         >
           {journey === 'arrived' ? (
             <div className="flex items-center gap-2.5 px-3.5 py-3">
-              <span className="w-8 h-8 rounded-full bg-[#E4F3E9] dark:bg-[#14251F]/60 text-[#126B34] dark:text-[#7CC99A] flex items-center justify-center flex-shrink-0">
+              <span className="w-8 h-8 rounded-full bg-[#E4F3E9] dark:bg-[#0A2E22]/60 text-[#126B34] dark:text-[#E0E0E0] flex items-center justify-center flex-shrink-0">
                 <Flag className="w-4 h-4" />
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-[#14151A] dark:text-[#F1F1EF]">Arrived at camp</p>
-                <p className="text-[10px] font-data text-[#6B6D77] dark:text-[#A1A3AC] truncate">
+                <p className="text-xs font-bold text-[#14151A] dark:text-[#FFFFFF]">Arrived at camp</p>
+                <p className="text-[10px] font-data text-[#6B6D77] dark:text-[#D0D0D0] truncate">
                   {route.destinationName}
                 </p>
               </div>
@@ -523,22 +523,22 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
           ) : (
             <div className="px-3.5 py-3 space-y-2.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#6B6D77] dark:text-[#A1A3AC] font-data min-w-0">
+                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#6B6D77] dark:text-[#D0D0D0] font-data min-w-0">
                   {journey === 'tracking' ? (
-                    <Satellite className="w-3.5 h-3.5 text-[#126B34] dark:text-[#7CC99A] flex-shrink-0" />
+                    <Satellite className="w-3.5 h-3.5 text-[#126B34] dark:text-[#E0E0E0] flex-shrink-0" />
                   ) : (
-                    <CompassIcon className="w-3.5 h-3.5 text-[#1A3A6B] dark:text-[#9DB8DC] flex-shrink-0" />
+                    <CompassIcon className="w-3.5 h-3.5 text-[#1A3A6B] dark:text-[#D0D0D0] flex-shrink-0" />
                   )}
                   <span className="truncate">
                     {journey === 'tracking' ? 'GPS Tracking' : 'Route Preview'}
                   </span>
                 </span>
-                <span className="text-[10px] font-data font-bold text-[#126B34] dark:text-[#7CC99A] flex-shrink-0">
+                <span className="text-[10px] font-data font-bold text-[#126B34] dark:text-[#E0E0E0] flex-shrink-0">
                   {Math.round(100 - pctLeft)}% done
                 </span>
               </div>
 
-              <div className="w-full h-1.5 bg-[#E4E4E0] dark:bg-[#2E3038] rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-[#E4E4E0] dark:bg-[#B4B4B4] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#126B34] rounded-full transition-[width] duration-300 ease-linear"
                   style={{ width: `${100 - pctLeft}%` }}
@@ -547,26 +547,26 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
 
               <div className="flex items-center gap-3">
                 <span className="flex items-baseline gap-0.5">
-                  <span className="font-data text-xl font-black text-[#12294D] dark:text-[#F1F1EF]">
+                  <span className="font-data text-xl font-black text-[#12294D] dark:text-[#FFFFFF]">
                     {remainingKm}
                   </span>
-                  <span className="text-[10px] font-data text-[#6B6D77] dark:text-[#A1A3AC]">km left</span>
+                  <span className="text-[10px] font-data text-[#6B6D77] dark:text-[#D0D0D0]">km left</span>
                 </span>
-                <span className="w-px h-4 bg-[#E4E4E0] dark:bg-[#2E3038]" />
+                <span className="w-px h-4 bg-[#E4E4E0] dark:bg-[#B4B4B4]" />
                 <span className="flex items-baseline gap-0.5">
-                  <span className="font-data text-xl font-black text-[#12294D] dark:text-[#F1F1EF]">
+                  <span className="font-data text-xl font-black text-[#12294D] dark:text-[#FFFFFF]">
                     {remainingMin}
                   </span>
-                  <span className="text-[10px] font-data text-[#6B6D77] dark:text-[#A1A3AC]">min</span>
+                  <span className="text-[10px] font-data text-[#6B6D77] dark:text-[#D0D0D0]">min</span>
                 </span>
                 {movedKm > 0.02 && (
                   <>
-                    <span className="w-px h-4 bg-[#E4E4E0] dark:bg-[#2E3038]" />
+                    <span className="w-px h-4 bg-[#E4E4E0] dark:bg-[#B4B4B4]" />
                     <span className="flex items-baseline gap-0.5">
-                      <span className="font-data text-sm font-bold text-[#126B34] dark:text-[#7CC99A]">
+                      <span className="font-data text-sm font-bold text-[#126B34] dark:text-[#E0E0E0]">
                         {movedKm.toFixed(1)}
                       </span>
-                      <span className="text-[10px] font-data text-[#6B6D77] dark:text-[#A1A3AC]">
+                      <span className="text-[10px] font-data text-[#6B6D77] dark:text-[#D0D0D0]">
                         km covered
                       </span>
                     </span>
@@ -576,9 +576,9 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
 
               {/* Off-corridor detection — the whole point of a "dry corridor" */}
               {isOffRoute && (
-                <div className="flex items-start gap-1.5 px-2 py-1.5 rounded-md bg-[#FCF1F0] dark:bg-[#2A1614]/50 border border-[#FBE9E7] dark:border-[#4A2622]">
-                  <AlertTriangle className="w-3 h-3 text-[#B42318] dark:text-[#E0776C] flex-shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-[#7A1C13] dark:text-[#E0776C] leading-tight">
+                <div className="flex items-start gap-1.5 px-2 py-1.5 rounded-md bg-[#FCF1F0] dark:bg-[#3F1414]/50 border border-[#FBE9E7] dark:border-[#7F1D1D]">
+                  <AlertTriangle className="w-3 h-3 text-[#B42318] dark:text-[#C0C0C0] flex-shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-[#7A1C13] dark:text-[#C0C0C0] leading-tight">
                     <strong>Off the safe corridor</strong> — you are{' '}
                     {Math.round((offRouteKm ?? 0) * 1000)} m from the route. Rejoin it or turn back;
                     the detour may cross submerged roads.
@@ -586,7 +586,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
                 </div>
               )}
 
-              <p className="text-[9px] text-[#A1A3AC] leading-tight">
+              <p className="text-[9px] text-[#A1A3AC] leading-tight dark:text-[#C0C0C0]">
                 {journey === 'tracking'
                   ? 'Advances only as you move. Distance measured along the corridor.'
                   : 'No GPS — replaying the route at accelerated pace. Distances are real.'}
@@ -598,21 +598,21 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
 
       {/* ── Static summary chip ── */}
       {route && !active && (
-        <div className="absolute left-3 bottom-3 z-[500] flex items-center gap-3 px-3 py-2 rounded-lg bg-white/95 dark:bg-[#17181C]/95 border border-[#DEDEDA] dark:border-[#2E3038] shadow-lg backdrop-blur">
+        <div className="absolute left-3 bottom-3 z-[500] flex items-center gap-3 px-3 py-2 rounded-lg bg-white/95 dark:bg-[#212121]/95 border border-[#DEDEDA] dark:border-[#B4B4B4] shadow-lg backdrop-blur">
           <span className="flex items-center gap-1.5">
-            <Navigation className="w-3.5 h-3.5 text-[#1A3A6B] dark:text-[#9DB8DC]" />
-            <span className="text-[11px] font-data font-bold text-[#14151A] dark:text-[#F1F1EF]">
+            <Navigation className="w-3.5 h-3.5 text-[#1A3A6B] dark:text-[#D0D0D0]" />
+            <span className="text-[11px] font-data font-bold text-[#14151A] dark:text-[#FFFFFF]">
               {route.distanceKm} km
             </span>
           </span>
-          <span className="w-px h-3.5 bg-[#DEDEDA] dark:bg-[#2E3038]" />
-          <span className="text-[11px] font-data font-bold text-[#14151A] dark:text-[#F1F1EF]">
+          <span className="w-px h-3.5 bg-[#DEDEDA] dark:bg-[#B4B4B4]" />
+          <span className="text-[11px] font-data font-bold text-[#14151A] dark:text-[#FFFFFF]">
             {route.etaMinutes} min
           </span>
-          <span className="w-px h-3.5 bg-[#DEDEDA] dark:bg-[#2E3038]" />
+          <span className="w-px h-3.5 bg-[#DEDEDA] dark:bg-[#B4B4B4]" />
           <span className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-[#126B34] dark:text-[#5BBF7A]" />
-            <span className="text-[11px] font-data font-bold text-[#126B34] dark:text-[#5BBF7A]">
+            <MapPin className="w-3.5 h-3.5 text-[#126B34] dark:text-[#D0D0D0]" />
+            <span className="text-[11px] font-data font-bold text-[#126B34] dark:text-[#D0D0D0]">
               Dry corridor
             </span>
           </span>
@@ -621,10 +621,10 @@ export const RouteMap: React.FC<RouteMapProps> = ({ route, center, className = '
 
       {/* ── Empty state ── */}
       {!route && (
-        <div className="absolute inset-0 z-[400] flex flex-col items-center justify-center gap-1.5 bg-white/70 dark:bg-[#17181C]/70 backdrop-blur-[1px] pointer-events-none">
-          <LocateFixed className="w-5 h-5 text-[#6B6D77] dark:text-[#A1A3AC]" />
-          <p className="text-xs font-bold text-[#14151A] dark:text-[#F1F1EF]">No route calculated yet</p>
-          <p className="text-[11px] text-[#6B6D77] dark:text-[#A1A3AC]">
+        <div className="absolute inset-0 z-[400] flex flex-col items-center justify-center gap-1.5 bg-white/70 dark:bg-[#212121]/70 backdrop-blur-[1px] pointer-events-none">
+          <LocateFixed className="w-5 h-5 text-[#6B6D77] dark:text-[#D0D0D0]" />
+          <p className="text-xs font-bold text-[#14151A] dark:text-[#FFFFFF]">No route calculated yet</p>
+          <p className="text-[11px] text-[#6B6D77] dark:text-[#D0D0D0]">
             Set your location, choose a camp, then press Calculate Path
           </p>
         </div>
@@ -644,7 +644,7 @@ export const LocateButton: React.FC<{
     type="button"
     onClick={onClick}
     disabled={loading || disabled}
-    className="px-3 py-1.5 rounded-lg bg-[#1A3A6B] hover:bg-[#12294D] dark:bg-[#1C1D22] dark:hover:bg-[#2E3038] text-white text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+    className="px-3 py-1.5 rounded-lg bg-[#1A3A6B] hover:bg-[#12294D] dark:bg-[#2F2F2F] dark:hover:bg-[#2E3038] text-white text-[11px] font-bold transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
   >
     {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
     <span>My Location</span>
