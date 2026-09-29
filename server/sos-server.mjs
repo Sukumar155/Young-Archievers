@@ -17,7 +17,7 @@
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { requestOtp, verifyOtp, smsStatus, getSession } from './otp.mjs';
@@ -27,7 +27,7 @@ import {
   createIncident, listIncidents, setIncidentStatus,
   stats as recordStats,
 } from './records.mjs';
-import { initDb, dbStatus } from './db.mjs';
+import { initDb, dbStatus, isWriteBlocked, writeError } from './db.mjs';
 import { explorerHtml } from './api-explorer.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -59,11 +59,38 @@ function persistReports() {
     mkdirSync(DATA_DIR, { recursive: true });
     writeFileSync(DATA_FILE, JSON.stringify(reports.slice(0, MAX_STORED_REPORTS), null, 2));
   } catch (err) {
-    console.warn('[sos-server] Could not persist sos.json:', err.message);
+    // Also surfaced by db.mjs for the records tables; this one is the SOS queue.
+    console.error(
+      `[sos-server] Could not persist sos.json: ${err.message}. `
+      + 'This report is in memory only and will be lost.'
+    );
   }
 }
 
 /* ------------------------------- helpers ------------------------------- */
+
+/**
+ * Refuse a write when the storage layer cannot actually store it.
+ *
+ * A report that is accepted with a 200 and then dropped is the worst possible
+ * outcome for a disaster-response system: the citizen believes their SOS was
+ * sent, the operator never sees it. When DATABASE_URL is missing on a read-only
+ * host, that is exactly what the JSON fallback would do, so the write is
+ * rejected up front with an actionable message instead.
+ */
+function rejectIfNotWritable(res, what) {
+  if (!isWriteBlocked()) return false;
+  sendJson(res, 503, {
+    ok: false,
+    error: `Cannot store this ${what} — the database is not writable.`,
+    detail: `Storage error: ${writeError()}. `
+          + 'A serverless deployment has a read-only filesystem, so the JSON '
+          + 'fallback cannot be used. Set DATABASE_URL in the Vercel project to a '
+          + 'PostgreSQL connection string and redeploy.',
+    db: dbStatus(),
+  });
+  return true;
+}
 
 const nowIso = () => new Date().toISOString();
 
@@ -148,14 +175,23 @@ async function fetchUpstream(url, payload, stream, signal) {
   return { status: 502, error: 'AI provider request failed' };
 }
 
-function setCors(res) {
+/**
+ * Apply CORS headers.
+ *
+ * The origin is read from the request that was passed in, not from `res.req`.
+ * Node's ServerResponse happens to expose a back-reference, but a Vercel
+ * serverless response is not guaranteed to, and reading `res.req?.headers`
+ * there silently produced no allow-origin header — which the browser reports as
+ * an opaque network failure rather than a CORS error.
+ */
+function setCors(req, res) {
   // Locked to configured origins. This used to be '*' across the whole API,
   // which is unacceptable now that the API issues sessions and mutates records.
   const allowed = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  const origin = res.req?.headers?.origin;
+  const origin = req?.headers?.origin;
   if (origin && allowed.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
@@ -173,7 +209,28 @@ function sendJson(res, status, payload) {
 /* ----------------------------- SOS handling ----------------------------- */
 
 /** Reads and bounds an HTTP request body (resolves the raw string). */
+/**
+ * Read the request body as a string.
+ *
+ * Two environments, one contract. Under `node server/sos-server.mjs` this is a
+ * plain Node IncomingMessage and the body arrives as a stream. On Vercel the
+ * runtime has already consumed and parsed the stream before the function is
+ * invoked, so there is nothing to read and `req.body` is already populated.
+ *
+ * The callers all do `JSON.parse(await readBody(req))`, so re-serialising an
+ * already-parsed object keeps them working unchanged in both worlds instead of
+ * duplicating every handler.
+ */
 function readBody(req, maxBytes = MAX_BODY_BYTES) {
+  // Serverless: no readable stream, body already decoded. The `typeof req.on`
+  // check is what distinguishes the two, not a feature flag.
+  if (typeof req.on !== 'function' && req.body !== undefined) {
+    const b = req.body;
+    if (typeof b === 'string') return Promise.resolve(b);
+    if (Buffer.isBuffer(b)) return Promise.resolve(b.toString('utf8'));
+    return Promise.resolve(JSON.stringify(b ?? {}));
+  }
+
   return new Promise((resolve, reject) => {
     let raw = '';
     let size = 0;
@@ -276,11 +333,15 @@ function handleHealth(res) {
       sendJson(res, 200, {
         ok: true,
         service: 'NEXORA SOS Bridge',
+        runtime: IS_SERVERLESS ? 'vercel-function' : 'node-server',
         uptimeSec: process.uptime(),
         reports: reports.length,
         alerts: s.alerts,
         incidents: s.incidents,
         db: dbStatus(),
+        // Named explicitly so a demo does not promise features this deployment
+        // cannot serve. Both are verified unavailable, not merely untested.
+        unavailable: IS_SERVERLESS ? ['/api/yolo/detect', '/api/events'] : [],
       });
     })
     .catch((err) => {
@@ -301,25 +362,22 @@ function handleList(res, url) {
   sendJson(res, 200, reports.slice(0, limit));
 }
 
-function handleSubmit(req, res) {
-  let raw = '';
-  let size = 0;
-  let done = false;
+async function handleSubmit(req, res) {
+  // Refuse before reading the body when storage cannot hold the result.
+  if (rejectIfNotWritable(res, 'SOS report')) return;
 
-  req.on('data', (chunk) => {
-    if (done) return;
-    size += chunk.length;
-    if (size > MAX_BODY_BYTES) {
-      done = true;
-      req.destroy();
-      sendJson(res, 413, { error: 'Payload too large' });
-      return;
-    }
-    raw += chunk;
-  });
+  // readBody, not an inline stream reader: on Vercel the body is already parsed
+  // and there is no 'data' event to subscribe to, so a local stream reader hangs
+  // until the function times out. It also enforces the same size cap.
+  let raw;
+  try {
+    raw = await readBody(req, MAX_BODY_BYTES);
+  } catch (err) {
+    sendJson(res, err.status || 400, { error: err.message });
+    return;
+  }
 
-  req.on('end', () => {
-    if (done) return;
+  {
     let body;
     try {
       body = raw ? JSON.parse(raw) : {};
@@ -360,7 +418,7 @@ function handleSubmit(req, res) {
     );
 
     sendJson(res, 201, report);
-  });
+  }
 }
 
 /* ------------------------------ AI chat relay ----------------------------- */
@@ -474,6 +532,21 @@ async function handleChat(req, res) {
  * (which runs on the local CPU using ultralytics), and returns JSON.
  */
 async function handleYoloDetect(req, res) {
+  // Inference shells out to Python and loads ~48 MB of weights. A serverless
+  // function has no child-process runtime, no GPU and nowhere to put the model
+  // files, so this cannot work there no matter how the function is configured.
+  // Refuse up front with an explanation instead of a spawn error.
+  if (IS_SERVERLESS) {
+    sendJson(res, 501, {
+      ok: false,
+      error: 'YOLO inference is not available on this deployment.',
+      detail: 'It requires a Python runtime and ~48 MB of model weights, which a '
+            + 'serverless function cannot provide. Run `npm run dev:all` locally to '
+            + 'use the vision panel, or deploy the bridge to a persistent host.',
+    });
+    return;
+  }
+
   const contentType = req.headers['content-type'] || '';
   if (!contentType.includes('multipart/form-data')) {
     sendJson(res, 400, { error: 'Expected multipart/form-data' });
@@ -719,6 +792,21 @@ function handleOtpStatus(req, res) {
 }
 
 function handleSSE(req, res) {
+  // Server-Sent Events hold the connection open indefinitely. A serverless
+  // function is frozen and recycled as soon as its response ends, so the stream
+  // would die silently a few seconds in and the client would reconnect forever.
+  // Say so, once, clearly.
+  if (IS_SERVERLESS) {
+    sendJson(res, 501, {
+      ok: false,
+      error: 'Live event stream is not available on this deployment.',
+      detail: 'SSE needs a long-lived connection, which a serverless function cannot hold. '
+            + 'Run `npm run dev:all` locally, or deploy the bridge to a persistent host '
+            + '(Render/Railway/Fly) if the live feed is required.',
+    });
+    return;
+  }
+
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
@@ -800,6 +888,7 @@ async function handleListAlerts(req, res, url) {
 }
 
 async function handleCreateAlert(req, res) {
+  if (rejectIfNotWritable(res, 'alert')) return;
   const session = guard(req, res, 'ALERT_BROADCAST');
   if (!session) return;
   await handleJson(req, res, async (body) => {
@@ -838,6 +927,7 @@ async function handleListIncidents(req, res, url) {
 }
 
 async function handleCreateIncident(req, res) {
+  if (rejectIfNotWritable(res, 'incident')) return;
   const session = guard(req, res, 'INCIDENT_CREATE');
   if (!session) return;
   await handleJson(req, res, async (body) => {
@@ -902,10 +992,32 @@ function handlePatchSOS(req, res, id) {
 
 /* -------------------------------- server -------------------------------- */
 
-const server = createServer((req, res) => {
+/**
+ * True when running as a Vercel serverless function rather than the standalone
+ * Node server. A few endpoints cannot work there and say so explicitly instead
+ * of failing obscurely:
+ *
+ *   - /api/yolo/detect  spawns Python and loads ~48 MB of weights. No serverless
+ *     function can do this.
+ *   - /api/events       is Server-Sent Events, a long-lived connection. A
+ *     function is torn down the moment its response ends.
+ *   - the JSON store    needs a writable filesystem; functions get a read-only
+ *     one, so DATABASE_URL is mandatory there.
+ */
+export const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+/**
+ * The whole API surface as one dispatcher.
+ *
+ * Extracted out of an inline createServer callback so there is exactly one copy
+ * of the routing table. `npm start` calls this from a real listener for local
+ * development; `api/[[...slug]].ts` calls the same function from a Vercel
+ * function. Neither keeps its own copy of these rules, so they cannot drift.
+ */
+export function handleRequest(req, res) {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const path = url.pathname;
-  setCors(res);
+  setCors(req, res);
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -963,27 +1075,54 @@ const server = createServer((req, res) => {
   }
 
   sendJson(res, 404, { error: 'Not found' });
-});
+}
 
-loadReports();
+/**
+ * Boot the data layer and start listening — but only when this file is the
+ * process entry point.
+ *
+ * The `api/[[...slug]].ts` Vercel function imports handleRequest from this
+ * module. Without this guard, importing it would bind a port inside a serverless
+ * function, which neither works nor is wanted.
+ */
+function startStandaloneServer() {
+  loadReports();
 
-// Connect to PostgreSQL before accepting traffic, so the first request does not
-// race the pool. initDb() never throws: with no DATABASE_URL, or a database
-// that is down, it logs the reason and the app runs on the JSON files.
-initDb().then((r) => {
-  const st = dbStatus();
-  console.log(`[sos-server] Database: ${st.backend}${st.error ? ` (${st.error})` : ''}`);
-  void r;
-});
+  // Connect to PostgreSQL before accepting traffic, so the first request does not
+  // race the pool. initDb() never throws: with no DATABASE_URL, or a database
+  // that is down, it logs the reason and the app runs on the JSON files.
+  initDb().then((r) => {
+    const st = dbStatus();
+    console.log(`[sos-server] Database: ${st.backend}${st.error ? ` (${st.error})` : ''}`);
+    void r;
+  });
 
-server.listen(PORT, () => {
-  const sms = smsStatus();
-  console.log(`[sos-server] NEXORA SOS Bridge listening on http://localhost:${PORT}`);
-  console.log(`[sos-server] Stored reports: ${reports.length}`);
-  console.log(
-    `[sos-server] SMS OTP provider: ${sms.provider}`
-    + (sms.smsConfigured
-      ? ' (live gateway configured)'
-      : ' — DEV MODE: no SMS gateway configured, OTPs print to this terminal')
-  );
-});
+  const server = createServer(handleRequest);
+  server.listen(PORT, () => {
+    const sms = smsStatus();
+    console.log(`[sos-server] NEXORA SOS Bridge listening on http://localhost:${PORT}`);
+    console.log(`[sos-server] Stored reports: ${reports.length}`);
+    console.log(
+      `[sos-server] SMS OTP provider: ${sms.provider}`
+      + (sms.smsConfigured
+        ? ' (live gateway configured)'
+        : ' - DEV MODE: no SMS gateway configured, OTPs print to this terminal')
+    );
+  });
+}
+
+// ESM has no `require.main`, so compare this module's URL with process.argv[1].
+// Under Vercel, argv[1] is the function entry and never this file.
+const invokedDirectly = (() => {
+  try {
+    return process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+  } catch {
+    return false;
+  }
+})();
+
+if (invokedDirectly) startStandaloneServer();
+else if (IS_SERVERLESS) {
+  // Imported by the Vercel function. Warm the data layer on cold start.
+  initDb().catch(() => { /* db.mjs logs the reason and falls back */ });
+}

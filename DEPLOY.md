@@ -1,88 +1,83 @@
 # Deploying NEXORA
 
-The app has two halves and they must be deployed to **two different places**:
+Single deployment, on Vercel. The frontend and the API both live there.
 
-| Part | What it is | Where it goes |
+## Layout
+
+| Path | What | Becomes |
 | --- | --- | --- |
-| `src/` → `dist/` | static React/Vite bundle | **Vercel** (or any static host) |
-| `server/sos-server.mjs` | long-running Node HTTP server, 16 routes | **Railway / Render / Fly.io / a VPS** |
+| `src/` → `dist/` | static React/Vite bundle | the site |
+| `api/[[...slug]].ts` | one serverless function | every `/api/*` route |
+| `server/sos-server.mjs` | the same handlers, as a plain Node server | `npm start`, for local dev |
 
-## Why they cannot be merged
+`api/[[...slug]].ts` is an optional catch-all, so `/api/health`,
+`/api/auth/otp/request` and `/api/alerts/abc` all reach it with their full path
+intact. It delegates to `handleRequest`, which is the *same* dispatcher
+`npm start` uses — one routing table, so the local server and the deployed
+function cannot drift apart.
 
-`npm run build` runs `tsc -b && vite build`, which produces only static files. The
-backend is a real listening server, not a bundle. The `/api` → `localhost:3001`
-proxy in `vite.config.ts` exists **only under `npm run dev`**.
+`vercel.json` routes everything that is not `/api/*` to `index.html` so client
+side routes survive a hard refresh.
 
-If you deploy the frontend alone, every `/api/*` route 404s. That is not a subtle
-bug — it breaks login, SOS reporting, alerts, the chatbot and the YOLO panel all
-at once, while the read-only screens still render from local mock state, so the
-site *looks* fine right up until you press the button.
+## What you must set: `DATABASE_URL`
 
-## 1. Deploy the bridge first
+**This is the one required step.**
 
-Railway, Render and Fly all work the same way:
+A serverless function has a read-only filesystem, so the JSON fallback in
+`server/data/` cannot be used — every write would fail. The API detects this and
+refuses writes with a 503 rather than accepting a report and silently dropping
+it, but the fix is a real database.
 
-- **Build command:** `npm install`
-- **Start command:** `npm start`  (runs `node server/sos-server.mjs`)
-- **Health check path:** `/api/health`
+Both of these have a free tier and take about two minutes:
 
-`server/sos-server.mjs` reads `PORT` from the environment, so the platform's
-injected port is picked up automatically. No port changes needed.
+- **Neon** — neon.tech, sign in with GitHub, create a project, copy the
+  connection string
+- **Supabase** — supabase.com, new project, Settings → Database → URI
 
-The bridge writes to `server/data/`. That directory is created on demand
-(`server/db.mjs` calls `mkdirSync(..., { recursive: true })`), so a fresh deploy
-with an empty filesystem is fine. Note that a free dyno may **wipe that data on
-redeploy** — acceptable for a demo. For anything durable, set `DATABASE_URL` and
-it switches to PostgreSQL (see `server/DATABASE_SETUP.md`).
-
-### The YOLO endpoint needs Python
-
-`/api/yolo/detect` shells out to Python and loads ~48 MB of weights. On Railway
-and Render you must add the Python runtime and:
+Then apply the schema once:
 
 ```bash
-pip install ultralytics
+node scripts/migrate.mjs          # creates the tables
+node scripts/migrate.mjs --verify # compares row counts, writes nothing
 ```
 
-and place the weights in `server/models/` (`fire_smoke.pt`, `flood.pt`). Without
-them the endpoint still responds, but returns a specific "No YOLO weight files
-available" error rather than failing silently. See `server/YOLO_SETUP.md`.
+Without this, login and OTP still work (they are in-memory), but SOS reports,
+alerts and incidents are rejected. `/api/health` reports `"writable": false`
+and the write error when it happens.
 
-## 2. Configure the bridge's CORS
-
-The bridge refuses unknown origins by default — correctly, since it issues
-sessions and mutates records. Set the exact frontend origin:
+## Environment variables on Vercel
 
 ```
+DATABASE_URL=postgresql://user:password@host/db?sslmode=require
 CORS_ORIGINS=https://your-app.vercel.app
 ```
 
-Comma-separate for several. **A wrong or missing value here is the single most
-common cause of "everything works locally, nothing works deployed"** — the
-browser blocks the response and the request looks like a network error.
+`CORS_ORIGINS` must be your exact frontend origin. If it is wrong the browser
+blocks the response and the failure looks like a network error.
 
-## 3. Point the frontend at the bridge
+**Do not set `VITE_API_URL`.** The frontend and the API are on the same origin
+now, so `apiUrl()` resolves to a relative path and everything just works. The
+variable only exists for a split deployment.
 
-In the **Vercel** project settings → Environment Variables:
+## What does not work here, and why
 
-```
-VITE_API_URL=https://your-bridge.up.railway.app
-```
+Both are refused with a `501` and an explanation rather than failing quietly.
 
-No trailing slash needed. This is a build-time variable, so **redeploy after
-adding it** — Vite inlines it at build.
+| Endpoint | Why |
+| --- | --- |
+| `/api/yolo/detect` | spawns Python and loads ~48 MB of weights. A serverless function has no child-process runtime, no GPU and no disk for the model files. It still works with `npm run dev:all` locally. |
+| `/api/events` | Server-Sent Events hold a connection open; a function is frozen the moment its response ends. |
 
-Every API call in the app is built from `apiUrl()` in `src/services/sosApi.ts`.
-`npm run verify:api-base` enforces that no component hardcodes a relative
-`/api/...` path, which would compile, work in dev, and 404 in production.
+`/api/health` lists both under `unavailable` so a demo cannot promise what this
+deployment cannot serve.
 
-## 4. Real SMS (optional)
+## SMS
 
-By default the bridge runs with `OTP_SMS_PROVIDER=console`: no SMS is sent, and
-the code is returned as `devCode` with `devMode: true` so the UI displays it on
-screen. The login flow works end to end, which is usually enough for a demo.
+`OTP_SMS_PROVIDER` defaults to `console`: nothing is texted, and the code comes
+back as `devCode` with `devMode: true` so the UI shows it on screen. The login
+flow completes end to end, which is usually enough for a demo.
 
-To actually text the code, set one of:
+To actually send SMS, set one of:
 
 ```
 OTP_SMS_PROVIDER=twilio
@@ -94,28 +89,37 @@ TWILIO_FROM=+1...
 or `msg91` (`MSG91_AUTH_KEY`, `MSG91_TEMPLATE_ID`) or `fast2sms`
 (`FAST2SMS_API_KEY`). See `server/.env.example`.
 
-## 5. Verify
+## Verify
 
 ```bash
-curl https://your-bridge.up.railway.app/api/health
+curl https://your-app.vercel.app/api/health
 ```
 
-Expect JSON with `"ok": true`. If that works but the browser still fails, it is
-almost always `CORS_ORIGINS`.
+Expect `"runtime": "vercel-function"` and `"db": { "backend": "postgresql",
+"writable": true }`. If `writable` is false, `DATABASE_URL` is wrong or the
+schema was never applied.
 
-The login screen now distinguishes these cases for you:
+## Local development
 
-- *"Cannot reach the NEXORA backend at …"* → wrong or unset `VITE_API_URL`
-- *"the request returned a page, not API JSON"* → frontend-only deployment
-- a real API error (rate limited, wrong code) → the bridge is working
+```bash
+npm run dev:all
+```
+
+Vite on 5173, the bridge on 3001, with `/api` proxied. This is the only place
+YOLO works.
 
 ## Checks
 
 ```bash
-npm run verify:api-base   # no hardcoded /api paths
-npm run verify:sensors    # live sensor feed behaves
-npm run verify:banner     # alert-banner cascade resolves to white
-npm run verify:text       # no encoding damage in source
-npm run verify:css        # no nested CSS comment terminators
-npm run scan-push         # no secrets before pushing
+npm run test:serverless    # the dispatcher works in the Vercel request shape
+npm run verify:api-base    # no component bypasses apiUrl()
+npm run verify:sensors     # live sensor feed behaves
+npm run verify:banner      # alert-banner cascade resolves to white
+npm run verify:text        # no encoding damage in source
+npm run verify:css         # no nested CSS comment terminators
 ```
+
+`test:serverless` is the important one. It drives `handleRequest` with a mock
+request that has a pre-parsed body and no readable stream, which is the shape
+Vercel actually delivers — the original code subscribed to `req.on('data')` and
+would have hung until the function timed out.

@@ -38,6 +38,8 @@ const CONNECT_TIMEOUT_MS = Number(process.env.PG_CONNECT_TIMEOUT_MS) || 3000;
 let pool = null;
 let pgReady = false;
 let lastPgError = null;
+/** Set by jsonPersist when the fallback filesystem refuses a write. */
+let lastWriteError = null;
 
 /* ------------------------------ JSON fallback ------------------------------ */
 
@@ -58,13 +60,42 @@ function jsonLoad(kind) {
   return [];
 }
 
+/**
+ * Persist to the JSON fallback.
+ *
+ * Failures are recorded rather than swallowed. The original version only logged
+ * a warning, which is harmless on a laptop but catastrophic on a serverless
+ * deployment: Vercel mounts the filesystem read-only, so every write throws
+ * EROFS, the warning scrolls past in the build log, and an SOS report is
+ * accepted with a 200 and then silently discarded. A caller that cannot be
+ * reached has to be told, not assumed.
+ */
 function jsonPersist(kind, rows) {
   try {
     mkdirSync(DATA_DIR, { recursive: true });
     writeFileSync(fileFor(kind), JSON.stringify(rows, null, 2));
+    lastWriteError = null;
+    return true;
   } catch (err) {
-    console.warn(`[db] could not write ${kind}.json:`, err.message);
+    lastWriteError = err;
+    console.error(
+      `[db] WRITE FAILED for ${kind}.json: ${err.message}. `
+      + 'The record exists in memory only and will be lost when this process ends. '
+      + 'On a serverless host this means DATABASE_URL is required — set it in the '
+      + 'Vercel project to a PostgreSQL connection string.'
+    );
+    return false;
   }
+}
+
+/** True when the last JSON write failed, i.e. data is not actually persisted. */
+export function isWriteBlocked() {
+  return lastWriteError !== null;
+}
+
+/** Human-readable reason the last write failed, or null. */
+export function writeError() {
+  return lastWriteError ? String(lastWriteError.message) : null;
 }
 
 /* -------------------------------- lifecycle -------------------------------- */
@@ -75,7 +106,19 @@ function jsonPersist(kind, rows) {
  */
 export async function initDb() {
   if (!CONNECTION) {
-    console.log('[db] DATABASE_URL not set - using JSON files in server/data/');
+    // Being loud here matters: on a read-only filesystem the JSON fallback is
+    // not a degraded mode, it is a data-loss bug waiting for the first report.
+    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      console.error(
+        '[db] DATABASE_URL is not set on a serverless host. The JSON fallback '
+        + 'CANNOT be used here — Vercel mounts the filesystem read-only, so every '
+        + 'write will fail and SOS reports will be discarded. Add a PostgreSQL '
+        + 'connection string to the Vercel project (Neon or Supabase both have a '
+        + 'free tier) and redeploy.'
+      );
+    } else {
+      console.log('[db] DATABASE_URL not set - using JSON files in server/data/');
+    }
     return { ok: false, reason: 'not-configured' };
   }
   try {
@@ -121,6 +164,10 @@ export function dbStatus() {
     backend: pgReady ? 'postgresql' : 'json-fallback',
     configured: Boolean(CONNECTION),
     error: lastPgError ? String(lastPgError.message) : null,
+    // True when records are being accepted but cannot be stored. This is the
+    // difference between "degraded" and "silently losing people's SOS reports".
+    writable: !isWriteBlocked(),
+    writeError: writeError(),
   };
 }
 
