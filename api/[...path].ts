@@ -1,5 +1,5 @@
 /**
- * api/[[...slug]].ts — the NEXORA bridge, as a Vercel serverless function.
+ * api/[...path].ts — the NEXORA bridge, as a Vercel serverless function.
  *
  * Why this file exists
  * --------------------
@@ -15,12 +15,18 @@
  * One routing table, two hosts. The local dev server and the deployed function
  * cannot drift apart, because there is only one copy of the rules.
  *
- * `[[...slug]]` is an optional catch-all, so /api/health, /api/sos,
- * /api/auth/otp/request and /api/alerts/abc all land in this one function with
- * their full path intact in req.url.
+ * `[...path]` is a catch-all, so /api/health, /api/sos, /api/auth/otp/request
+ * and /api/alerts/abc all land in this one function with their full path
+ * intact. It is `[...]` rather than `[[...]]` because nothing is served at
+ * exactly /api, and the optional form deployed as a single-segment matcher
+ * anyway — every nested route 404'd.
+ *
+ * The type module lives in api/_lib/ rather than beside this file on purpose:
+ * Vercel turns *every* file in api/ into a function, so a types-only module
+ * with no default export deploys as a route that 500s.
  */
 import { handleRequest, IS_SERVERLESS } from '../server/sos-server.mjs';
-import type { VercelRequest, VercelResponse } from './types.js';
+import type { VercelRequest, VercelResponse } from './_lib/types.js';
 
 export const config = {
   // The chat route calls an external AI provider with retries, so the default
@@ -28,18 +34,34 @@ export const config = {
   maxDuration: 60,
 };
 
-export default function handler(req: VercelRequest, res: VercelResponse): void {
-  // Reconstruct the original path. A catch-all receives the matched segments,
-  // and the dispatcher matches on the full pathname, so it has to be rebuilt
-  // rather than read from req.url (which some runtimes leave as just "/api").
-  const slug = req.query?.slug;
-  const rebuilt = Array.isArray(slug)
-    ? `/api/${slug.map(encodeURIComponent).join('/')}`
-    : typeof slug === 'string' && slug
-      ? `/api/${slug.split('/').map(encodeURIComponent).join('/')}`
-      : '/api';
+/**
+ * Rebuild the original path from the catch-all parameter.
+ *
+ * The dispatcher matches on the full pathname, and a catch-all request does not
+ * reliably carry it in req.url, so it is reassembled from the matched segments.
+ * The parameter name is read from the request rather than hardcoded, so
+ * renaming the file segment (`[...slug]` -> `[...path]`) cannot silently break
+ * routing again — which is exactly what happened when the name changed and the
+ * lookup for `query.slug` stopped matching.
+ */
+function originalPath(req: VercelRequest): string | null {
+  const query = req.query || {};
+  for (const value of Object.values(query)) {
+    const segments = Array.isArray(value)
+      ? value
+      : typeof value === 'string' && value
+        ? value.split('/')
+        : null;
+    if (segments && segments.length) {
+      return `/api/${segments.map(encodeURIComponent).join('/')}`;
+    }
+  }
+  return null;
+}
 
-  if (!req.url || !req.url.startsWith('/api')) {
+export default function handler(req: VercelRequest, res: VercelResponse): void {
+  const rebuilt = originalPath(req);
+  if (rebuilt && (!req.url || !req.url.startsWith('/api'))) {
     req.url = rebuilt;
   }
 

@@ -28,5 +28,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
+  /*
+   * api/_lib/ is included so the types are checked, and it is safe to include
+   * because Vercel does not turn underscore-prefixed files inside api/ into
+   * routes. Leaving the types there as api/types.ts deployed it as a 500ing
+   * endpoint, since every plain file in api/ becomes a function.
+   */
   "include": ["api", "server"]
 }

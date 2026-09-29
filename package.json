@@ -25,6 +25,7 @@
     "verify:css": "python scripts/check-css-comments.py",
     "verify:api-base": "node scripts/verify-api-base.mjs",
     "test:serverless": "node scripts/test-serverless.mjs",
+    "verify:routing": "node scripts/verify-vercel-routing.mjs",
     "roster": "node scripts/roster.mjs",
     "roster:add": "node scripts/roster.mjs",
     "db:migrate": "node scripts/migrate.mjs",
