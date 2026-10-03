@@ -120,29 +120,40 @@ if (!code) {
   const replay = await call('POST', '/api/auth/otp/verify', { body: { phone: PHONE, code } });
   check('code cannot be replayed', replay.status === 400, `status=${replay.status}`);
 
-  // ── 3. Privilege escalation ────────────────────────────────────────────────
+  // ── 3. Authorisation (the important one) ──────────────────────────────────
   section('3. Authorisation (the important one)');
   const session = await call('GET', '/api/auth/session', { token });
   check('GET /api/auth/session works with a token', session.status === 200);
 
+  // Demo policy: the role typed on the login wizard is now honoured, so this
+  // session (requested DDMO_OFFICER) really is one — and that must strip the
+  // old "roster-only" downgrade behaviour out of the test.
   check(
-    'role came from the server roster, not the request body',
-    session.json?.role === 'CITIZEN',
+    'requested role is honoured (demo policy)',
+    session.json?.role === 'DDMO_OFFICER',
     `requested DDMO_OFFICER, granted ${session.json?.role}`
   );
 
   const noAuth = await call('POST', '/api/alerts', { body: { title: 'unauthorised' } });
   check('privileged write without a token is rejected', noAuth.status === 401, `status=${noAuth.status}`);
 
+  // A citizen session (explicit CITIZEN request) must still be locked out of
+  // every privileged write.
+  const cReq = await call('POST', '/api/auth/otp/request', { body: { phone: PHONE, role: 'CITIZEN' } });
+  const cVer = await call('POST', '/api/auth/otp/verify', { body: { phone: PHONE, code: cReq.json?.devCode } });
+  const citizenToken = cVer.json?.token;
+  check('CITIZEN session issued', typeof citizenToken === 'string' && cVer.json?.role === 'CITIZEN',
+    `role=${cVer.json?.role}`);
+
   const citizenAlert = await call('POST', '/api/alerts', {
-    token,
+    token: citizenToken,
     body: { title: 'citizen should not do this', severity: 'CRITICAL' },
   });
   check('CITIZEN cannot broadcast a CAP alert', citizenAlert.status === 403,
     `status=${citizenAlert.status}`);
 
   const citizenIncident = await call('POST', '/api/incidents', {
-    token,
+    token: citizenToken,
     body: {
       title: 'Smoke test incident', description: 'automated check',
       lat: 13.0827, lng: 80.2707, locationName: 'Chennai', peopleCount: 2,
@@ -153,7 +164,7 @@ if (!code) {
     `id=${citizenIncident.json?.incident?.id}`);
 
   const triage = await call('PATCH', '/api/sos/SMOKE-NOT-REAL', {
-    token, body: { status: 'FALSE_ALARM' },
+    token: citizenToken, body: { status: 'FALSE_ALARM' },
   });
   check('CITIZEN cannot triage the SOS queue', triage.status === 403, `status=${triage.status}`);
 }

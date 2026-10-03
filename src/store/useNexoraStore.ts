@@ -1261,16 +1261,21 @@ export const useNexoraStore = create<NexoraState>((set, get) => ({
   responderMissionStatus: "ASSIGNED",
 
   login: (phone: string, role: UserRole = 'DDMO_OFFICER', profile?: UserProfile) => {
-    const isCitizen = role === 'CITIZEN';
     const next: SessionState = {
       isAuthenticated: true,
       userRole: role,
       userName: profile?.fullName?.trim() || defaultNameFor(role),
       userPhone: phone,
       userProfile: profile ?? null,
-      // Authority roles land on the command hub; the in-app switcher
-      // (DDMO / Field Responder / Shelter Manager) lives inside it.
-      currentView: isCitizen ? "CITIZEN_PORTAL" : "COMMAND_DASHBOARD"
+      // Authority roles land on their respective dashboards: the command hub
+      // for DDMO, the field-mobile view for responders, and the shelter console
+      // for shelter managers — the in-app switcher remains available inside
+      // the command dashboard.
+      currentView:
+        role === 'CITIZEN' ? 'CITIZEN_PORTAL'
+        : role === 'FIELD_RESPONDER' ? 'FIELD_RESPONDER'
+        : role === 'SHELTER_MANAGER' ? 'SHELTER_MANAGER'
+        : 'COMMAND_DASHBOARD'
     };
     set(next);
     writeSession(next);

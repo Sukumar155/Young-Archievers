@@ -763,7 +763,11 @@ async function handleOtpRequest(req, res) {
   }
 
   try {
-    const result = await requestOtp(body.phone, { role: cleanString(body.role, 'CITIZEN') });
+    // An explicit role in the request is honoured; omitting it falls back to
+    // the roster match, then CITIZEN. (Previously an omitted role was forced
+    // to 'CITIZEN' here, which silently blocked roster-registered numbers
+    // from signing in with their posting when the client didn't resend it.)
+    const result = await requestOtp(body.phone, { role: body.role ? cleanString(body.role) : undefined });
     sendJson(res, result.ok ? 200 : result.status || 400, result);
   } catch (err) {
     sendJson(res, err.status || 400, { ok: false, error: err.message });

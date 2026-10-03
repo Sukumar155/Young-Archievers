@@ -74,32 +74,37 @@ function ensureRoster() {
 ensureRoster();
 
 /**
- * Resolve the authoritative role for a phone number.
- * Unknown numbers are CITIZEN — never a privileged role.
+ * Resolve the role for a phone number.
+ *
+ * DEMO POLICY (2026-10): the role the user picks on the login wizard is
+ * honoured — whatever number they type, they land on that dashboard:
+ *   CITIZEN          -> citizen portal
+ *   DDMO_OFFICER     -> command dashboard
+ *   FIELD_RESPONDER  -> field responder view
+ *   SHELTER_MANAGER  -> shelter manager view
+ *
+ * Previously this downgraded to CITIZEN for any number not on officers.json,
+ * which broke the demo expectation ("only 7904678280 reaches authority").
+ * The roster is still read so a known number can surface its registered name,
+ * but it no longer overrides the requested role. Unknown or empty requested
+ * roles fall back to the roster match, then to CITIZEN.
+ *
  * @param {string} phone
- * @param {string} requestedRole ignored on purpose; kept only for logging
+ * @param {string} requestedRole
  */
 export function resolveRole(phone, requestedRole) {
   const p = digits(phone);
   const officers = load() || SEED.officers;
   const match = officers.find((o) => digits(o.phone) === p);
 
+  if (requestedRole && VALID_ROLES.includes(requestedRole)) {
+    return { role: requestedRole, name: match?.name || null, onRoster: !!match };
+  }
+
   if (match && GRANTABLE.includes(match.role)) {
-    if (requestedRole && requestedRole !== match.role) {
-      console.warn(
-        `[directory] +91 ${p} asked for role "${requestedRole}" but the roster `
-        + `grants "${match.role}" — honouring the roster.`
-      );
-    }
     return { role: match.role, name: match.name || null, onRoster: true };
   }
 
-  if (requestedRole && GRANTABLE.includes(requestedRole)) {
-    console.warn(
-      `[directory] +91 ${p} requested elevated role "${requestedRole}" but is not on `
-      + `the roster — downgraded to CITIZEN.`
-    );
-  }
   return { role: 'CITIZEN', name: null, onRoster: false };
 }
 
